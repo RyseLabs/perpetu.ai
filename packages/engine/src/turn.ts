@@ -54,7 +54,7 @@ export class TurnEngine {
             break;
             
           case 'train':
-            updated = this.procesTraining(updated);
+            updated = this.processTraining(updated);
             break;
             
           // Other event types can be added here
@@ -140,7 +140,7 @@ export class TurnEngine {
   /**
    * Process training activity
    */
-  private static procesTraining(character: Character): Character {
+  private static processTraining(character: Character): Character {
     // Improve technique proficiency
     const updatedTechniques = character.techniques.map(technique => ({
       ...technique,
