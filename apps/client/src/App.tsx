@@ -46,14 +46,14 @@ function App() {
         </div>
         
         {/* Center Panel - Map & Chat */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col overflow-hidden">
           {/* Map (top 60%) */}
-          <div className="flex-[6]">
+          <div className="flex-[6] overflow-hidden">
             <MapView />
           </div>
           
           {/* Chat (bottom 40%) */}
-          <div className="flex-[4]">
+          <div className="flex-[4] overflow-hidden">
             <ChatPanel />
           </div>
         </div>
