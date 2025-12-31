@@ -7,6 +7,9 @@ interface GameState {
   characters: Character[];
   events: WorldEvent[];
   
+  // Available worlds list
+  availableWorlds: Array<{ id: string; name: string; createdAt: number }>;
+  
   // Selected character for info panel
   selectedCharacter: Character | null;
   
@@ -25,8 +28,12 @@ interface GameState {
   isWorldBuilding: boolean;
   worldBuildingError: string | null;
   
+  // Loading states
+  isLoadingWorld: boolean;
+  isLoadingWorlds: boolean;
+  
   // Actions
-  setWorld: (world: World) => void;
+  setWorld: (world: World | null) => void;
   setCharacters: (characters: Character[]) => void;
   addCharacter: (character: Character) => void;
   updateCharacter: (characterId: string, updates: Partial<Character>) => void;
@@ -36,17 +43,23 @@ interface GameState {
   addEvent: (event: WorldEvent) => void;
   setConnected: (connected: boolean) => void;
   setWorldBuilding: (isBuilding: boolean, error?: string | null) => void;
+  setAvailableWorlds: (worlds: Array<{ id: string; name: string; createdAt: number }>) => void;
+  setLoadingWorld: (isLoading: boolean) => void;
+  setLoadingWorlds: (isLoading: boolean) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
   world: null,
   characters: [],
   events: [],
+  availableWorlds: [],
   selectedCharacter: null,
   chatMessages: [],
   connected: false,
   isWorldBuilding: false,
   worldBuildingError: null,
+  isLoadingWorld: false,
+  isLoadingWorlds: false,
   
   setWorld: (world) => set({ world }),
   
@@ -94,4 +107,10 @@ export const useGameStore = create<GameState>((set) => ({
   
   setWorldBuilding: (isBuilding, error = null) => 
     set({ isWorldBuilding: isBuilding, worldBuildingError: error }),
+  
+  setAvailableWorlds: (worlds) => set({ availableWorlds: worlds }),
+  
+  setLoadingWorld: (isLoading) => set({ isLoadingWorld: isLoading }),
+  
+  setLoadingWorlds: (isLoading) => set({ isLoadingWorlds: isLoading }),
 }));

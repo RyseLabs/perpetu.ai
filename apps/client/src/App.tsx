@@ -3,13 +3,14 @@ import { PartyPanel } from './components/PartyPanel';
 import { MapView } from './components/MapView';
 import { ChatPanel } from './components/ChatPanel';
 import { InfoPanel } from './components/InfoPanel';
+import { WorldSelector } from './components/WorldSelector';
 import { useGameStore } from './store/gameStore';
 
 /**
  * Main application component with HUD layout
  */
 function App() {
-  const { world, connected, setConnected } = useGameStore();
+  const { connected, setConnected } = useGameStore();
   
   useEffect(() => {
     // TODO: Initialize WebSocket connection
@@ -23,9 +24,7 @@ function App() {
       <header className="bg-panel-bg border-b border-panel-border px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-bold text-accent">Perpetu.AI</h1>
-          <div className="text-sm text-text-secondary">
-            {world ? world.name : 'No world loaded'}
-          </div>
+          <WorldSelector />
         </div>
         <div className="flex items-center gap-2">
           <div

@@ -89,16 +89,16 @@ export const ChatPanel: React.FC = () => {
   };
   
   return (
-    <div className="h-full bg-panel-bg border-t border-panel-border flex flex-col">
+    <div className="h-full bg-panel-bg border-t border-panel-border flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-3 border-b border-panel-border">
+      <div className="flex-shrink-0 p-3 border-b border-panel-border">
         <h3 className="font-semibold text-accent">
           {!world ? 'World Builder' : 'Game Master'}
         </h3>
       </div>
       
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      {/* Messages - Scrollable container */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
         {chatMessages.length === 0 ? (
           <div className="text-text-secondary text-sm space-y-2">
             {!world ? (
@@ -126,7 +126,7 @@ export const ChatPanel: React.FC = () => {
               }`}
             >
               <div
-                className={`max-w-[80%] p-3 rounded-lg ${
+                className={`max-w-[80%] p-3 rounded-lg break-words ${
                   message.sender === 'player'
                     ? 'bg-accent text-white'
                     : message.sender === 'system'
@@ -134,7 +134,7 @@ export const ChatPanel: React.FC = () => {
                     : 'bg-panel-border text-text-primary'
                 }`}
               >
-                <div className="text-sm whitespace-pre-wrap break-words">{message.content}</div>
+                <div className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">{message.content}</div>
                 <div className="text-xs opacity-60 mt-1">
                   {new Date(message.timestamp).toLocaleTimeString()}
                 </div>
@@ -154,7 +154,7 @@ export const ChatPanel: React.FC = () => {
       </div>
       
       {/* Input */}
-      <div className="p-3 border-t border-panel-border">
+      <div className="flex-shrink-0 p-3 border-t border-panel-border">
         <div className="flex flex-col gap-2">
           <textarea
             value={input}
