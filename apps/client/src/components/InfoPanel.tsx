@@ -218,17 +218,53 @@ export const InfoPanel: React.FC = () => {
               </div>
             )}
             
-            {/* Inventory */}
-            {selectedCharacter.inventory.length > 0 && (
+            {/* Equipment (Weapons & Armor) */}
+            {selectedCharacter.inventory.some(i => ['weapon', 'armor'].includes(i.type)) && (
               <div>
-                <h4 className="font-semibold mb-2">Inventory</h4>
+                <h4 className="font-semibold mb-2">Equipment</h4>
+                <div className="space-y-2">
+                  {selectedCharacter.inventory
+                    .filter(i => ['weapon', 'armor'].includes(i.type))
+                    .map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-2 bg-panel-border rounded text-sm"
+                      >
+                        <div className="flex justify-between">
+                          <span className="font-semibold">{item.name}</span>
+                          <span className="text-text-secondary text-xs capitalize">
+                            {item.type}
+                          </span>
+                        </div>
+                        {item.description && (
+                          <div className="text-text-secondary text-xs mt-1">
+                            {item.description}
+                          </div>
+                        )}
+                        {item.quantity > 1 && (
+                          <div className="text-text-secondary text-xs">
+                            Quantity: {item.quantity}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Other Items (Consumables, Quest Items, etc.) */}
+            {selectedCharacter.inventory.some(i => !['weapon', 'armor'].includes(i.type)) && (
+              <div>
+                <h4 className="font-semibold mb-2">Other Items</h4>
                 <div className="space-y-1 text-sm">
-                  {selectedCharacter.inventory.map((item) => (
-                    <div key={item.id} className="flex justify-between">
-                      <span>{item.name}</span>
-                      <span className="text-text-secondary">x{item.quantity}</span>
-                    </div>
-                  ))}
+                  {selectedCharacter.inventory
+                    .filter(i => !['weapon', 'armor'].includes(i.type))
+                    .map((item) => (
+                      <div key={item.id} className="flex justify-between">
+                        <span>{item.name}</span>
+                        <span className="text-text-secondary">x{item.quantity}</span>
+                      </div>
+                    ))}
                 </div>
               </div>
             )}

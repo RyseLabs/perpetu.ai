@@ -156,6 +156,8 @@ export const MapView: React.FC = () => {
   React.useEffect(() => {
     const newCharacterNodes: Node[] = characters
       .filter((character) => {
+        // Only validate position - show ALL characters with valid positions
+        // Discovery is handled in the InfoPanel, not on the map
         if (!character.position || typeof character.position.x !== 'number' || typeof character.position.y !== 'number') {
           console.warn('Character missing valid position:', character.name, character.position);
           return false;

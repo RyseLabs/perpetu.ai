@@ -128,6 +128,8 @@ Core responsibilities:
 4. Reveal information based on player proximity and perception
 5. Manage combat encounters
 6. Track character progression and stat updates
+7. Update character positions as they traverse the map
+8. Track equipment and inventory changes during gameplay
 
 Important rules:
 - Only reveal information the player can perceive based on their advancement tier
@@ -136,13 +138,18 @@ Important rules:
 - Characters gain strength by defeating enemies and cycling scales
 - Time advances each turn, triggering timeline events
 - NPCs move autonomously toward their goals
+- When characters move, update their position { x, y } coordinates
+- Track equipment changes (equipping, unequipping, finding, breaking)
+- Update inventory when characters loot, buy, use, or drop items
+- Equipment affects character stats (weapons increase damage, armor increases AC)
 
 Advancement system:
 - Each tier difference = ±3 bonus in combat
 - Perception range scales with advancement (Monarch sees entire map)
 - Travel speed scales with advancement (Monarch travels instantly)
 
-Always output deterministic, schema-validated JSON for game state updates.`;
+Always output deterministic, schema-validated JSON for game state updates.
+Frequently update character positions and equipment in your responses.`;
 
 /**
  * Generate prompt for turn simulation
@@ -351,10 +358,18 @@ export function generateGameMasterPrompt(
     Math.abs(c.position.y - (playerCharacter?.position.y || 0)) < 5
   );
 
+  const equipment = playerCharacter?.inventory
+    .filter(i => ['weapon', 'armor'].includes(i.type))
+    .map(i => i.name)
+    .join(', ') || 'None';
+
   return `You are the Game Master for "${world.name}".
 
 Current situation:
-- Player character: ${playerCharacter ? `${playerCharacter.name} (${playerCharacter.advancementTier}) at position (${playerCharacter.position.x}, ${playerCharacter.position.y})` : 'Not created yet'}
+- Player character: ${playerCharacter ? `${playerCharacter.name} (${playerCharacter.advancementTier}) at position (${playerCharacter.position.x.toFixed(1)}, ${playerCharacter.position.y.toFixed(1)})` : 'Not created yet'}
+- HP: ${playerCharacter ? `${playerCharacter.stats.currentHp}/${playerCharacter.stats.maxHp}` : 'N/A'}
+- Madra: ${playerCharacter ? `${playerCharacter.madraCore.currentMadra}/${playerCharacter.madraCore.maxMadra}` : 'N/A'}
+- Equipment: ${equipment}
 - Nearby characters: ${nearbyCharacters.map(c => `${c.name} (${c.advancementTier})`).join(', ') || 'None'}
 
 Recent conversation:
@@ -369,8 +384,15 @@ As Game Master:
 4. Update character states as needed
 5. Keep the world feeling alive and reactive
 
-Respond naturally and engagingly. Do NOT output JSON unless specifically updating game state.
-Your response should be narrative text that advances the story.`;
+IMPORTANT: If the player's action involves:
+- Movement: Describe the journey and mention position changes
+- Combat/Looting: Update inventory with found items, equipment changes
+- Using items/techniques: Update madra, HP, or inventory accordingly
+- Discovering locations: Note new areas found
+
+While you should primarily output narrative text, include brief state update notes when character position, HP, madra, or inventory changes so the game state can be synchronized.
+
+Respond naturally and engagingly, advancing the story.`;
 }
 
 /**
