@@ -17,7 +17,7 @@ export const InfoPanel: React.FC = () => {
   // Show location info if selected
   if (selectedLocation) {
     const playerCharacter = characters.find(c => c.isPlayerCharacter);
-    const distance = playerCharacter
+    const distance = playerCharacter && playerCharacter.position
       ? calculateDistance(
           playerCharacter.position.x,
           playerCharacter.position.y,
@@ -27,7 +27,8 @@ export const InfoPanel: React.FC = () => {
       : 'N/A';
     
     const charactersAtLocation = characters.filter(
-      c => Math.abs(c.position.x - selectedLocation.position.x) < 1 &&
+      c => c.position && 
+           Math.abs(c.position.x - selectedLocation.position.x) < 1 &&
            Math.abs(c.position.y - selectedLocation.position.y) < 1
     );
     
@@ -101,6 +102,18 @@ export const InfoPanel: React.FC = () => {
         <h2 className="text-xl font-bold mb-4 text-accent">Info Panel</h2>
         <p className="text-text-secondary text-sm">
           Select a character or location on the map to view information
+        </p>
+      </div>
+    );
+  }
+  
+  // Check if character has position data
+  if (!selectedCharacter.position) {
+    return (
+      <div className="h-full bg-panel-bg border-l border-panel-border p-4">
+        <h2 className="text-xl font-bold mb-4 text-accent">Character Info</h2>
+        <p className="text-text-secondary text-sm">
+          Character data incomplete. Position information missing.
         </p>
       </div>
     );

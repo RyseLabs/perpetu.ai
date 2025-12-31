@@ -298,10 +298,20 @@ export function generatePlayerCharacterPrompt(
   world: World,
   playerDescription: string
 ): string {
+  const locationsList = world.map?.locations
+    ? world.map.locations
+        .map((loc) => `- ${loc.name} (${loc.type}) at position (${loc.position.x.toFixed(1)}, ${loc.position.y.toFixed(1)})`)
+        .join('\n')
+    : 'No locations defined';
+    
   return `Create a player character for the world "${world.name}".
 
 World details:
-${JSON.stringify({ name: world.name, description: world.description, locations: world.map?.locations || [] }, null, 2)}
+Name: ${world.name}
+Description: ${world.description}
+
+Available Starting Locations:
+${locationsList}
 
 Player's character description:
 ${playerDescription}
@@ -310,13 +320,17 @@ Generate a complete character JSON with:
 - Name, description, and background from player input
 - Advancement tier (default Foundation if not specified)
 - Madra core nature (default Pure if not specified)
-- Starting stats based on their tier
-- Starting position at an appropriate location from the world
+- Starting stats based on their tier (Foundation: 10-12 stats, 20-30 HP, AC 10-12)
+- **CRITICAL: position object with x and y coordinates near one of the locations above**
 - Empty inventory with basic starting items
-- Empty timeline (player controls their actions)
+- Empty timeline array [] (player controls their actions)
+- Empty techniques array []
 - isPlayerCharacter: true
 - isInPlayerParty: true
 - discoveredByPlayer: true
+
+**IMPORTANT: You MUST include a valid "position" field like: { "x": 25.5, "y": 40.2 }**
+Choose a starting position at or near an appropriate location from the list.
 
 Ensure the character fits naturally into the world.`;
 }

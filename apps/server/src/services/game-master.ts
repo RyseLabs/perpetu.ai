@@ -3,6 +3,16 @@ import { Character } from '@perpetu-ai/models';
 import { fileStorage } from '../storage.js';
 import { config } from '../config.js';
 
+// Counter for unique IDs
+let idCounter = 0;
+
+/**
+ * Generate a unique character ID
+ */
+function generateUniqueCharacterId(): string {
+  return `char-${Date.now()}-${++idCounter}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
 /**
  * Game Master service for managing gameplay, player characters, and AI narration
  */
@@ -41,7 +51,27 @@ export class GameMasterService {
     
     // Create character in file storage
     const now = Date.now();
-    const characterId = `char-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const characterId = generateUniqueCharacterId();
+    
+    // Ensure position is valid - if AI didn't generate one, pick a random starting location
+    if (!characterData.position || typeof characterData.position.x !== 'number' || typeof characterData.position.y !== 'number') {
+      console.warn('AI did not generate valid position for player character, selecting starting location');
+      
+      // Try to use first location if available
+      if (world.map.locations && world.map.locations.length > 0) {
+        const startLocation = world.map.locations[0];
+        characterData.position = { 
+          x: startLocation.position.x + (Math.random() - 0.5) * 2, // Slight offset
+          y: startLocation.position.y + (Math.random() - 0.5) * 2
+        };
+        console.log(`Placed player character at ${startLocation.name}`);
+      } else {
+        // Fallback to center of map
+        characterData.position = { x: 50, y: 50 };
+        console.log('Placed player character at map center');
+      }
+    }
+    
     const character: Character = {
       ...characterData,
       id: characterId,
