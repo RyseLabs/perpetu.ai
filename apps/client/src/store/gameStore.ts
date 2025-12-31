@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { World, Character, WorldEvent } from '@perpetu-ai/models';
+import type { World, Character, WorldEvent, Location } from '@perpetu-ai/models';
 
 interface GameState {
   // World state
@@ -12,6 +12,9 @@ interface GameState {
   
   // Selected character for info panel
   selectedCharacter: Character | null;
+  
+  // Selected location for info panel
+  selectedLocation: Location | null;
   
   // Chat messages
   chatMessages: Array<{
@@ -38,6 +41,7 @@ interface GameState {
   addCharacter: (character: Character) => void;
   updateCharacter: (characterId: string, updates: Partial<Character>) => void;
   setSelectedCharacter: (character: Character | null) => void;
+  setSelectedLocation: (location: Location | null) => void;
   addChatMessage: (sender: 'player' | 'gm' | 'system', content: string) => void;
   clearChatMessages: () => void;
   addEvent: (event: WorldEvent) => void;
@@ -46,6 +50,7 @@ interface GameState {
   setAvailableWorlds: (worlds: Array<{ id: string; name: string; createdAt: number }>) => void;
   setLoadingWorld: (isLoading: boolean) => void;
   setLoadingWorlds: (isLoading: boolean) => void;
+  addLocation: (location: Location) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -54,6 +59,7 @@ export const useGameStore = create<GameState>((set) => ({
   events: [],
   availableWorlds: [],
   selectedCharacter: null,
+  selectedLocation: null,
   chatMessages: [],
   connected: false,
   isWorldBuilding: false,
@@ -81,7 +87,9 @@ export const useGameStore = create<GameState>((set) => ({
           : state.selectedCharacter,
     })),
   
-  setSelectedCharacter: (character) => set({ selectedCharacter: character }),
+  setSelectedCharacter: (character) => set({ selectedCharacter: character, selectedLocation: null }),
+  
+  setSelectedLocation: (location) => set({ selectedLocation: location, selectedCharacter: null }),
   
   addChatMessage: (sender, content) =>
     set((state) => ({
@@ -113,4 +121,17 @@ export const useGameStore = create<GameState>((set) => ({
   setLoadingWorld: (isLoading) => set({ isLoadingWorld: isLoading }),
   
   setLoadingWorlds: (isLoading) => set({ isLoadingWorlds: isLoading }),
+  
+  addLocation: (location) =>
+    set((state) => ({
+      world: state.world
+        ? {
+            ...state.world,
+            map: {
+              ...state.world.map,
+              locations: [...state.world.map.locations, location],
+            },
+          }
+        : null,
+    })),
 }));

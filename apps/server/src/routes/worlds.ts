@@ -154,4 +154,46 @@ export const worldRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
   });
+  
+  /**
+   * POST /api/worlds/:worldId/locations
+   * Add a new location to the world
+   */
+  fastify.post<{
+    Params: { worldId: string };
+    Body: {
+      name: string;
+      description: string;
+      position: { x: number; y: number };
+      type: 'city' | 'town' | 'dungeon' | 'landmark' | 'wilderness' | 'other';
+      faction?: string;
+    };
+  }>('/:worldId/locations', async (request, reply) => {
+    try {
+      const { worldId } = request.params;
+      const locationData = request.body;
+      
+      if (!locationData.name || !locationData.description || !locationData.position) {
+        return reply.code(400).send({
+          error: 'name, description, and position are required',
+        });
+      }
+      
+      const location = await worldBuilderService.addLocation(worldId, {
+        ...locationData,
+        discoveredByPlayer: true, // New locations are discovered
+      });
+      
+      return reply.code(201).send({
+        success: true,
+        location,
+      });
+    } catch (error) {
+      console.error('Add location error:', error);
+      return reply.code(500).send({
+        error: 'Failed to add location',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
 };

@@ -2,17 +2,105 @@ import React from 'react';
 import { useGameStore } from '../store/gameStore';
 
 /**
- * Right panel displaying selected character information
+ * Calculate distance between two points
+ */
+function calculateDistance(x1: number, y1: number, x2: number, y2: number): number {
+  return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+}
+
+/**
+ * Right panel displaying selected character or location information
  */
 export const InfoPanel: React.FC = () => {
-  const { selectedCharacter } = useGameStore();
+  const { selectedCharacter, selectedLocation, characters } = useGameStore();
   
+  // Show location info if selected
+  if (selectedLocation) {
+    const playerCharacter = characters.find(c => c.isPlayerCharacter);
+    const distance = playerCharacter
+      ? calculateDistance(
+          playerCharacter.position.x,
+          playerCharacter.position.y,
+          selectedLocation.position.x,
+          selectedLocation.position.y
+        ).toFixed(1)
+      : 'N/A';
+    
+    const charactersAtLocation = characters.filter(
+      c => Math.abs(c.position.x - selectedLocation.position.x) < 1 &&
+           Math.abs(c.position.y - selectedLocation.position.y) < 1
+    );
+    
+    return (
+      <div className="h-full bg-panel-bg border-l border-panel-border p-4 overflow-y-auto">
+        <h2 className="text-xl font-bold mb-4 text-accent">Location Info</h2>
+        
+        <div className="space-y-4">
+          {/* Basic Info */}
+          <div>
+            <h3 className="font-semibold text-lg mb-2">{selectedLocation.name}</h3>
+            <p className="text-sm text-text-secondary">{selectedLocation.description}</p>
+          </div>
+          
+          {/* Location Details */}
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <div className="text-text-secondary">Type</div>
+              <div className="font-semibold capitalize">{selectedLocation.type}</div>
+            </div>
+            <div>
+              <div className="text-text-secondary">Position</div>
+              <div className="font-semibold">
+                ({selectedLocation.position.x.toFixed(1)}, {selectedLocation.position.y.toFixed(1)})
+              </div>
+            </div>
+            {selectedLocation.faction && (
+              <div className="col-span-2">
+                <div className="text-text-secondary">Faction</div>
+                <div className="font-semibold">{selectedLocation.faction}</div>
+              </div>
+            )}
+            {playerCharacter && (
+              <div className="col-span-2">
+                <div className="text-text-secondary">Distance from You</div>
+                <div className="font-semibold">{distance} units</div>
+              </div>
+            )}
+          </div>
+          
+          {/* Characters at location */}
+          {charactersAtLocation.length > 0 && (
+            <div>
+              <h4 className="font-semibold mb-2">Characters Here</h4>
+              <div className="space-y-2">
+                {charactersAtLocation.map((character) => (
+                  <div
+                    key={character.id}
+                    className="p-2 bg-panel-border rounded text-sm"
+                  >
+                    <div className="font-semibold">
+                      {character.discoveredByPlayer ? character.name : 'Unknown'}
+                    </div>
+                    <div className="text-text-secondary text-xs">
+                      {character.advancementTier}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+  
+  // Show character info if selected
   if (!selectedCharacter) {
     return (
       <div className="h-full bg-panel-bg border-l border-panel-border p-4">
-        <h2 className="text-xl font-bold mb-4 text-accent">Character Info</h2>
+        <h2 className="text-xl font-bold mb-4 text-accent">Info Panel</h2>
         <p className="text-text-secondary text-sm">
-          Select a character on the map to view their information
+          Select a character or location on the map to view information
         </p>
       </div>
     );
@@ -49,6 +137,12 @@ export const InfoPanel: React.FC = () => {
                   <div className="font-semibold">{selectedCharacter.faction}</div>
                 </div>
               )}
+              <div>
+                <div className="text-text-secondary">Position</div>
+                <div className="font-semibold">
+                  ({selectedCharacter.position.x.toFixed(1)}, {selectedCharacter.position.y.toFixed(1)})
+                </div>
+              </div>
             </div>
             
             {/* Stats */}

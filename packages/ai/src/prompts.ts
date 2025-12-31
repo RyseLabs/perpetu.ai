@@ -295,3 +295,24 @@ As Game Master:
 Respond naturally and engagingly. Do NOT output JSON unless specifically updating game state.
 Your response should be narrative text that advances the story.`;
 }
+
+/**
+ * Generate DALL-E prompt for world map visualization
+ */
+export function generateMapImagePrompt(world: World): string {
+  const locationsDesc = world.map.locations
+    .slice(0, 8) // Limit to avoid overly complex prompts
+    .map(loc => `${loc.name} (${loc.type})`)
+    .join(', ');
+  
+  return `Fantasy RPG world map for "${world.name}". 
+${world.description}
+
+Key locations: ${locationsDesc}
+
+Style: Top-down fantasy map, artistic and hand-drawn style, clear terrain features, fantasy cartography, 
+parchment-like texture, rivers and mountains visible, suitable for tabletop RPG, 
+no text labels, no modern elements, medieval fantasy aesthetic, wide landscape format.
+
+The map should show diverse terrain types and be suitable for placing location markers.`;
+}

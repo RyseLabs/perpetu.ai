@@ -118,4 +118,33 @@ export class AIClient {
       throw error;
     }
   }
+  
+  /**
+   * Generate an image using DALL-E
+   */
+  async generateImage(
+    prompt: string,
+    size: '1024x1024' | '1792x1024' | '1024x1792' = '1792x1024'
+  ): Promise<string> {
+    try {
+      const response = await this.client.images.generate({
+        model: 'dall-e-3',
+        prompt,
+        n: 1,
+        size,
+        quality: 'standard',
+        response_format: 'url',
+      });
+      
+      const imageUrl = response.data[0]?.url;
+      if (!imageUrl) {
+        throw new Error('No image URL in response');
+      }
+      
+      return imageUrl;
+    } catch (error) {
+      console.error('DALL-E API error:', error);
+      throw error;
+    }
+  }
 }
