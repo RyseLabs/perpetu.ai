@@ -366,9 +366,9 @@ export function generateGameMasterPrompt(
   return `You are the Game Master for "${world.name}".
 
 Current situation:
-- Player character: ${playerCharacter ? `${playerCharacter.name} (${playerCharacter.advancementTier}) at position (${playerCharacter.position.x.toFixed(1)}, ${playerCharacter.position.y.toFixed(1)})` : 'Not created yet'}
-- HP: ${playerCharacter ? `${playerCharacter.stats.currentHp}/${playerCharacter.stats.maxHp}` : 'N/A'}
-- Madra: ${playerCharacter ? `${playerCharacter.madraCore.currentMadra}/${playerCharacter.madraCore.maxMadra}` : 'N/A'}
+- Player character: ${playerCharacter ? `${playerCharacter.name} (${playerCharacter.advancementTier}) at position (${playerCharacter.position?.x?.toFixed(1) ?? 'unknown'}, ${playerCharacter.position?.y?.toFixed(1) ?? 'unknown'})` : 'Not created yet'}
+- HP: ${playerCharacter ? `${playerCharacter.stats?.currentHp ?? 0}/${playerCharacter.stats?.maxHp ?? 0}` : 'N/A'}
+- Madra: ${playerCharacter ? `${playerCharacter.madraCore?.currentMadra ?? 0}/${playerCharacter.madraCore?.maxMadra ?? 0}` : 'N/A'}
 - Equipment: ${equipment}
 - Nearby characters: ${nearbyCharacters.map(c => `${c.name} (${c.advancementTier})`).join(', ') || 'None'}
 
