@@ -3,12 +3,23 @@ import { useGameStore } from '../store/gameStore';
 
 type Tab = 'party' | 'npcs' | 'locations';
 
+interface DragData {
+  type: 'character' | 'location';
+  id: string;
+  name: string;
+}
+
 /**
  * Left sidebar panel with tabs for Party, NPCs, and Locations
  */
 export const SidebarPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('party');
   const { characters, world, selectedCharacter, selectedLocation, setSelectedCharacter, setSelectedLocation } = useGameStore();
+  
+  const handleDragStart = (e: React.DragEvent, data: DragData) => {
+    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.setData('application/json', JSON.stringify(data));
+  };
   
   const partyMembers = characters.filter((char) => char.isInPlayerParty);
   const npcs = characters.filter((char) => !char.isInPlayerParty);
@@ -67,11 +78,17 @@ export const SidebarPanel: React.FC = () => {
                   return (
                     <button
                       key={character.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, {
+                        type: 'character',
+                        id: character.id,
+                        name: name
+                      })}
                       onClick={() => {
                         setSelectedCharacter(character);
                         setSelectedLocation(null);
                       }}
-                      className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 ${
+                      className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 cursor-move ${
                         selectedCharacter?.id === character.id
                           ? 'bg-accent text-white'
                           : 'bg-panel-border hover:bg-opacity-50'
@@ -117,11 +134,17 @@ export const SidebarPanel: React.FC = () => {
                   return (
                     <button
                       key={character.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, {
+                        type: 'character',
+                        id: character.id,
+                        name: name
+                      })}
                       onClick={() => {
                         setSelectedCharacter(character);
                         setSelectedLocation(null);
                       }}
-                      className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 ${
+                      className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 cursor-move ${
                         selectedCharacter?.id === character.id
                           ? 'bg-accent text-white'
                           : 'bg-panel-border hover:bg-opacity-50'
@@ -171,11 +194,17 @@ export const SidebarPanel: React.FC = () => {
                   return (
                     <button
                       key={location.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, {
+                        type: 'location',
+                        id: location.id,
+                        name: name
+                      })}
                       onClick={() => {
                         setSelectedLocation(location);
                         setSelectedCharacter(null);
                       }}
-                      className={`w-full text-left p-3 rounded-lg transition-colors ${
+                      className={`w-full text-left p-3 rounded-lg transition-colors cursor-move ${
                         selectedLocation?.id === location.id
                           ? 'bg-accent text-white'
                           : 'bg-panel-border hover:bg-opacity-50'

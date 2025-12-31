@@ -12,11 +12,10 @@ function calculateDistance(x1: number, y1: number, x2: number, y2: number): numb
  * Right panel displaying selected character or location information
  */
 export const InfoPanel: React.FC = () => {
-  const { selectedCharacter, selectedLocation, characters } = useGameStore();
+  const { selectedCharacter, selectedLocation, characters, setSelectedCharacter } = useGameStore();
   
   // Show location info if selected
   if (selectedLocation) {
-    const { setSelectedCharacter } = useGameStore();
     const playerCharacter = characters.find(c => c.isPlayerCharacter);
     const distance = playerCharacter && playerCharacter.position
       ? calculateDistance(

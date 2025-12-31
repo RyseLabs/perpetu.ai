@@ -205,17 +205,62 @@ const LocationNode: React.FC<{ data: any }> = ({ data }) => {
   );
 };
 
+/**
+ * Custom node component for dropped markers on the map
+ */
+const MarkerNode: React.FC<{ data: any }> = ({ data }) => {
+  const { setSelectedCharacter, setSelectedLocation, characters, world } = useGameStore();
+  const { type, entityId, name } = data;
+  
+  const handleClick = () => {
+    if (type === 'character') {
+      const char = characters.find(c => c.id === entityId);
+      if (char) {
+        setSelectedCharacter(char);
+        setSelectedLocation(null);
+      }
+    } else if (type === 'location') {
+      const loc = world?.map?.locations?.find(l => l.id === entityId);
+      if (loc) {
+        setSelectedLocation(loc);
+        setSelectedCharacter(null);
+      }
+    }
+  };
+  
+  return (
+    <div
+      onClick={handleClick}
+      className="cursor-pointer bg-accent text-white rounded-full p-2 shadow-lg hover:scale-110 transition-transform"
+      title={name}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    </div>
+  );
+};
+
 const nodeTypes: NodeTypes = {
   character: CharacterNode,
   characterGroup: CharacterGroupNode,
   location: LocationNode,
+  marker: MarkerNode,
 };
 
 /**
  * Map view component with draggable, zoomable world map
  */
 export const MapView: React.FC = () => {
-  const { world, characters } = useGameStore();
+  const { world, characters, setSelectedCharacter, setSelectedLocation } = useGameStore();
+  const [markers, setMarkers] = useState<Array<{
+    id: string;
+    type: 'character' | 'location';
+    entityId: string;
+    name: string;
+    position: { x: number; y: number };
+  }>>([]);
   
   // Debug logging
   React.useEffect(() => {
@@ -351,8 +396,17 @@ export const MapView: React.FC = () => {
       }
     });
     
-    setNodes([...locationNodes, ...characterNodes]);
-  }, [characters, world, setNodes]);
+    // Step 5: Create marker nodes
+    const markerNodes: Node[] = markers.map(marker => ({
+      id: `marker-${marker.id}`,
+      type: 'marker',
+      position: { x: marker.position.x, y: marker.position.y },
+      data: { type: marker.type, entityId: marker.entityId, name: marker.name },
+      draggable: true,
+    }));
+    
+    setNodes([...locationNodes, ...characterNodes, ...markerNodes]);
+  }, [characters, world, markers, setNodes]);
   
   if (!world) {
     return (
@@ -374,8 +428,58 @@ export const MapView: React.FC = () => {
     );
   }
   
+  // Handle drag over
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+  
+  // Handle drop
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      const { type, id, name } = data;
+      
+      // Get the ReactFlow bounds
+      const reactFlowBounds = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const x = e.clientX - reactFlowBounds.left;
+      const y = e.clientY - reactFlowBounds.top;
+      
+      // Check if marker already exists for this entity
+      const existingMarkerIndex = markers.findIndex(m => m.entityId === id);
+      
+      if (existingMarkerIndex >= 0) {
+        // Update existing marker position
+        const updatedMarkers = [...markers];
+        updatedMarkers[existingMarkerIndex] = {
+          ...updatedMarkers[existingMarkerIndex],
+          position: { x, y },
+        };
+        setMarkers(updatedMarkers);
+      } else {
+        // Create new marker (max 1 per entity)
+        const newMarker = {
+          id: `${type}-${id}-${Date.now()}`,
+          type,
+          entityId: id,
+          name,
+          position: { x, y },
+        };
+        setMarkers([...markers, newMarker]);
+      }
+    } catch (error) {
+      console.error('Error handling drop:', error);
+    }
+  };
+  
   return (
-    <div className="h-full bg-game-bg relative">
+    <div 
+      className="h-full bg-game-bg relative"
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       {world.map.backgroundImageUrl && (
         <div
           className="absolute inset-0 bg-cover bg-center opacity-40"
