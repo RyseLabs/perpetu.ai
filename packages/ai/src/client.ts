@@ -30,7 +30,7 @@ export class AIClient {
   ): Promise<T> {
     try {
       const completion = await this.client.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
@@ -68,7 +68,7 @@ export class AIClient {
   ): Promise<string> {
     try {
       const completion = await this.client.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
@@ -98,7 +98,7 @@ export class AIClient {
   ): AsyncGenerator<string, void, unknown> {
     try {
       const stream = await this.client.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
