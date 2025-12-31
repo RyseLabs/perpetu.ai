@@ -2,7 +2,6 @@ import {
   Character,
   CombatAction,
   CombatResult,
-  CombatRound,
   calculateTierBonus,
 } from '@perpetu-ai/models';
 import { DiceEngine } from './dice.js';
@@ -38,6 +37,8 @@ export class CombatEngine {
         return {
           action,
           success: false,
+          damage: 0,
+          madraCost: 0,
           description: 'Invalid action',
           effects: [],
         };
@@ -90,6 +91,7 @@ export class CombatEngine {
       roll: attackRoll,
       success: hits,
       damage,
+      madraCost: 0,
       effects,
       description: hits
         ? `${attacker.name} hits ${defender.name} for ${damage} damage! (Roll: ${attackRoll.total} vs AC ${defender.stats.armorClass})`
@@ -111,6 +113,8 @@ export class CombatEngine {
       return {
         action,
         success: false,
+        damage: 0,
+        madraCost: 0,
         description: 'Technique not found',
         effects: [],
       };
@@ -121,6 +125,8 @@ export class CombatEngine {
       return {
         action,
         success: false,
+        damage: 0,
+        madraCost: 0,
         description: `${caster.name} does not have enough madra! (${caster.madraCore.currentMadra}/${technique.madraCost} needed)`,
         effects: [],
       };
@@ -176,6 +182,8 @@ export class CombatEngine {
         actionType: 'defend',
       },
       success: true,
+      damage: 0,
+      madraCost: 0,
       effects: ['AC +2 until next turn'],
       description: `${character.name} takes a defensive stance!`,
     };
@@ -191,6 +199,8 @@ export class CombatEngine {
         actionType: 'dodge',
       },
       success: true,
+      damage: 0,
+      madraCost: 0,
       effects: ['Attacks against you have disadvantage until next turn'],
       description: `${character.name} prepares to dodge!`,
     };

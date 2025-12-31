@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { PartyPanel } from './components/PartyPanel';
 import { MapView } from './components/MapView';
 import { ChatPanel } from './components/ChatPanel';

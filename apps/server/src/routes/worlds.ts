@@ -1,6 +1,5 @@
 import { FastifyPluginAsync } from 'fastify';
 import { WorldBuilderService } from '../services/world-builder.js';
-import { z } from 'zod';
 
 const worldBuilderService = new WorldBuilderService();
 

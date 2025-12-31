@@ -1,5 +1,5 @@
 import { AIClient, generateWorldBuilderPrompt, WORLD_BUILDER_SYSTEM_PROMPT } from '@perpetu-ai/ai';
-import { World, Character, WorldMap, Location } from '@perpetu-ai/models';
+import { World, Character, WorldMap } from '@perpetu-ai/models';
 import { prisma } from '../db.js';
 import { config } from '../config.js';
 
@@ -63,10 +63,10 @@ export class WorldBuilderService {
     // Create characters in database
     const characters: Character[] = [];
     for (const charData of worldData.characters) {
+      const characterId = `char-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const character: Character = {
         ...charData,
-        id: `char-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        worldId: world.id,
+        id: characterId,
         createdAt: now,
         lastUpdated: now,
       };
@@ -74,7 +74,7 @@ export class WorldBuilderService {
       await prisma.character.create({
         data: {
           id: character.id,
-          worldId: character.worldId,
+          worldId: world.id,
           name: character.name,
           description: character.description || '',
           advancementTier: character.advancementTier,
@@ -135,9 +135,8 @@ export class WorldBuilderService {
       where: { worldId },
     });
     
-    return characters.map(char => ({
+    return characters.map((char: any): Character => ({
       id: char.id,
-      worldId: char.worldId,
       name: char.name,
       description: char.description || undefined,
       advancementTier: char.advancementTier as any,

@@ -59,7 +59,7 @@ export const websocketRoutes: FastifyPluginAsync = async (fastify) => {
     });
     
     // Handle errors
-    connection.socket.on('error', (error) => {
+    connection.socket.on('error', (error: Error) => {
       console.error('WebSocket error:', error);
     });
   });

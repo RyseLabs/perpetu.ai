@@ -1,4 +1,4 @@
-import type { Character, World, WorldMap, Location } from '@perpetu-ai/models';
+import type { Character, World } from '@perpetu-ai/models';
 
 /**
  * System prompt for the World Builder AI that ingests story files

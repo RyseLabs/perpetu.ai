@@ -1,7 +1,6 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import ReactFlow, {
   Node,
-  Edge,
   Controls,
   Background,
   useNodesState,
@@ -55,7 +54,7 @@ export const MapView: React.FC = () => {
   }));
   
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [, , onEdgesChange] = useEdgesState([]);
   
   // Update nodes when characters change
   React.useEffect(() => {
@@ -80,7 +79,7 @@ export const MapView: React.FC = () => {
     <div className="h-full bg-game-bg">
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={[]}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
