@@ -27,24 +27,19 @@ Check if the server is running.
 
 ## World Management
 
-### POST /api/worlds/ingest
+### POST /api/worlds/upload
 
-Upload a story file to generate a new game world with AI.
+Upload a story file to generate a new game world with AI (multipart/form-data).
 
-**Request Body:**
-```json
-{
-  "story": "string - The complete story/world description"
-}
-```
+**Content-Type:** `multipart/form-data`
+
+**Request:**
+- `file` - Story file (plain text, markdown, or JSON)
+- Max file size: 10MB
 
 **Example:**
 ```bash
-curl -X POST http://localhost:3000/api/worlds/ingest \
-  -H "Content-Type: application/json" \
-  -d '{
-    "story": "The Sacred Valley is a mystical land..."
-  }'
+curl -F "file=@sample-story.md" http://localhost:3000/api/worlds/upload
 ```
 
 **Success Response (201):**
@@ -72,18 +67,58 @@ curl -X POST http://localhost:3000/api/worlds/ingest \
 }
 ```
 
-**Error Response (400):**
+**Error Responses:**
+- `400` - No file uploaded or file is empty
+- `500` - Failed to process story
+
+---
+
+### POST /api/worlds/ingest
+
+Upload a story via JSON to generate a new game world with AI.
+
+**Request Body:**
 ```json
 {
-  "error": "Story content is required"
+  "story": "string - The complete story/world description"
 }
 ```
 
-**Error Response (500):**
+**Example:**
+```bash
+curl -X POST http://localhost:3000/api/worlds/ingest \
+  -H "Content-Type: application/json" \
+  -d '{
+    "story": "The Sacred Valley is a mystical land..."
+  }'
+```
+
+**Success Response (201):**
+Same as `/api/worlds/upload`
+
+---
+
+### GET /api/worlds
+
+List all worlds.
+
+**Example:**
+```bash
+curl http://localhost:3000/api/worlds
+```
+
+**Success Response (200):**
 ```json
 {
-  "error": "Failed to ingest story",
-  "message": "Detailed error message"
+  "success": true,
+  "worlds": [
+    {
+      "id": "world-1234567890",
+      "name": "The Sacred Valley",
+      ...
+    },
+    ...
+  ]
 }
 ```
 
@@ -157,19 +192,7 @@ curl http://localhost:3000/api/worlds/world-1234567890/characters
         "tier": "Foundation"
       },
       "techniques": [],
-      "stats": {
-        "strength": 10,
-        "dexterity": 12,
-        "constitution": 10,
-        "intelligence": 14,
-        "wisdom": 12,
-        "charisma": 10,
-        "maxHp": 20,
-        "currentHp": 20,
-        "armorClass": 12,
-        "initiative": 0,
-        "tierBonus": 0
-      },
+      "stats": {...},
       "inventory": [],
       "position": { "x": 250, "y": 300 },
       "activity": "idle",
@@ -240,100 +263,17 @@ Client can send ping to check connection.
 }
 ```
 
-#### Subscribe to Character
-Subscribe to updates for a specific character.
-```json
-// Client sends:
-{
-  "type": "subscribe_character",
-  "payload": {
-    "characterId": "char-123"
-  }
-}
-```
-
-#### Character Update (Server -> Client)
-Sent when a subscribed character is updated.
-```json
-{
-  "type": "character_update",
-  "payload": {
-    "character": {...},
-    "changes": ["position", "stats"]
-  }
-}
-```
-
-#### Turn Update (Server -> Client)
-Sent when the turn advances.
-```json
-{
-  "type": "turn_update",
-  "payload": {
-    "turn": 5,
-    "events": [...],
-    "updatedCharacters": [...]
-  }
-}
-```
-
 ---
 
-## Game Systems
+## Storage
 
-### Advancement Tiers
+All game data is stored in JSON files in the `./data` directory:
 
-Characters progress through tiers, each providing combat bonuses:
+- **Worlds**: `./data/worlds/{worldId}.json`
+- **Characters**: `./data/characters/{worldId}/{characterId}.json`
+- **Events**: `./data/events/{worldId}/{eventId}.json`
 
-| Tier | Level | Combat Bonus | Perception Range | Travel Speed |
-|------|-------|--------------|------------------|--------------|
-| Foundation | 0 | ±0 | 1/256 map | 1/256 map/day |
-| Iron | 1 | ±3 | 1/128 map | 1/128 map/day |
-| Jade | 2 | ±6 | 1/64 map | 1/64 map/day |
-| Low Gold | 3 | ±9 | 1/32 map | 1/32 map/day |
-| High Gold | 4 | ±12 | 1/32 map | 1/32 map/day |
-| True Gold | 5 | ±15 | 1/16 map | 1/16 map/day |
-| Underlord | 6 | ±18 | 1/8 map | 1/8 map/day |
-| Overlord | 7 | ±21 | 1/4 map | 1/4 map/day |
-| Archlord | 8 | ±24 | 1/2 map | 1/2 map/day |
-| Herald/Sage | 9 | ±27 | 1/2 map | 1/2 map/day |
-| Monarch | 10 | ±30 | Full map | Instant |
-
-**Tier Bonus Calculation:**
-- Each tier difference = ±3 to rolls
-- Example: Iron (1) vs Underlord (6) = 5 tier difference
-- Iron gets -15, Underlord gets +15
-
-### Madra Natures
-
-20 different madra natures, each with unique effects:
-
-- **Pure** - Disrupts enemy techniques
-- **Fire** - High damage, explosive
-- **Water** - Control and endurance
-- **Earth** - Defense and durability
-- **Wind** - Speed and cutting
-- **Sword** - Precision strikes
-- **Force** - Kinetic impact
-- **Destruction** - Annihilates matter
-- **Life** - Healing and growth
-- **Death** - Decay and entropy
-- And 10 more...
-
-### Combat System
-
-Turn-based combat using D&D 5e mechanics enhanced with:
-- Advancement tier bonuses (±3 per tier)
-- Madra technique system
-- Deterministic dice rolls
-- Technique proficiency progression
-
-### Advancement Resources (Scales)
-
-- Enemies drop scales containing 1/20-1/30 of their remaining madra
-- Cycling scales fills core and increases capacity
-- Advancement occurs when capacity threshold is met
-- Exponential growth per tier
+Files are human-readable and can be manually edited if needed.
 
 ---
 
@@ -353,12 +293,37 @@ Currently no rate limiting. Should be added for production.
 
 ---
 
-## Coming Soon
+## Examples
 
-- Turn simulation endpoints
-- Combat resolution endpoints
-- Character action endpoints
-- Event query endpoints
-- Authentication & authorization
-- Rate limiting
-- Webhook support for turn updates
+### Complete Workflow
+
+```bash
+# 1. Upload a story file
+curl -F "file=@sample-story.md" http://localhost:3000/api/worlds/upload
+
+# Response includes world ID
+
+# 2. Get world details
+curl http://localhost:3000/api/worlds/world-1234567890
+
+# 3. Get all characters
+curl http://localhost:3000/api/worlds/world-1234567890/characters
+
+# 4. Connect via WebSocket for real-time updates
+# (use JavaScript/browser or ws client)
+```
+
+### File Upload from JavaScript
+
+```javascript
+const formData = new FormData();
+formData.append('file', fileInput.files[0]);
+
+const response = await fetch('http://localhost:3000/api/worlds/upload', {
+  method: 'POST',
+  body: formData,
+});
+
+const result = await response.json();
+console.log('World created:', result.world);
+```

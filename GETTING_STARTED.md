@@ -7,10 +7,10 @@ This guide will help you set up and run the Perpetu.AI tabletop RPG maker from s
 Before you begin, ensure you have the following installed:
 
 - **Node.js** >= 18.0.0 ([Download](https://nodejs.org/))
-- **pnpm** >= 8.0.0 (Install: `npm install -g pnpm`)
-- **PostgreSQL** ([Download](https://www.postgresql.org/download/))
-- **Redis** ([Download](https://redis.io/download/))
+- **npm** (comes with Node.js) or **pnpm** (optional: `npm install -g pnpm`)
 - **OpenAI API Key** ([Get one here](https://platform.openai.com/api-keys))
+
+**That's it!** No Docker, PostgreSQL, or Redis required! 🎉
 
 ## Step 1: Clone and Install Dependencies
 
@@ -18,63 +18,13 @@ Before you begin, ensure you have the following installed:
 # Clone the repository (or navigate to the project directory)
 cd perpetu.ai
 
-# Install all dependencies
+# Install all dependencies (choose one)
+npm install
+# or
 pnpm install
 ```
 
-## Step 2: Set Up PostgreSQL Database
-
-### Option A: Local PostgreSQL Installation
-
-1. Start PostgreSQL service
-2. Create a new database:
-
-```bash
-# Connect to PostgreSQL
-psql postgres
-
-# Create database
-CREATE DATABASE perpetu_ai;
-
-# Exit psql
-\q
-```
-
-3. Your connection string will be:
-```
-postgresql://username:password@localhost:5432/perpetu_ai
-```
-
-### Option B: Docker PostgreSQL
-
-```bash
-docker run --name perpetu-postgres \
-  -e POSTGRES_PASSWORD=your_password \
-  -e POSTGRES_DB=perpetu_ai \
-  -p 5432:5432 \
-  -d postgres:15
-```
-
-Connection string: `postgresql://postgres:your_password@localhost:5432/perpetu_ai`
-
-## Step 3: Set Up Redis
-
-### Option A: Local Redis Installation
-
-```bash
-# Start Redis server
-redis-server
-```
-
-### Option B: Docker Redis
-
-```bash
-docker run --name perpetu-redis \
-  -p 6379:6379 \
-  -d redis:7
-```
-
-## Step 4: Configure Environment Variables
+## Step 2: Configure Environment Variables
 
 1. Copy the example environment file:
 
@@ -82,61 +32,42 @@ docker run --name perpetu-redis \
 cp .env.example .env
 ```
 
-2. Edit `.env` and add your credentials:
+2. Edit `.env` and add your OpenAI API key:
 
 ```env
 # OpenAI Configuration
 OPENAI_API_KEY=sk-your-actual-openai-api-key-here
 
-# Database Configuration
-DATABASE_URL=postgresql://postgres:password@localhost:5432/perpetu_ai
-
-# Redis Configuration
-REDIS_URL=redis://localhost:6379
-
-# Server Configuration
+# Server Configuration (optional, these are the defaults)
 PORT=3000
 NODE_ENV=development
 
-# CORS Settings
+# CORS Settings (optional)
 CORS_ORIGIN=http://localhost:5173
+
+# Storage Configuration (optional, defaults to ./data)
+# DATA_DIR=./data
 ```
 
 ⚠️ **IMPORTANT**: Replace `sk-your-actual-openai-api-key-here` with your real OpenAI API key!
 
-## Step 5: Build All Packages
+## Step 3: Build All Packages
 
 ```bash
-# Build all shared packages
-pnpm -r build
+# Build all shared packages (choose one)
+npm run build
+# or
+pnpm build
 ```
 
 This will compile TypeScript for all packages and apps.
 
-## Step 6: Set Up Database Schema
+## Step 4: Start the Development Servers
 
 ```bash
-# Navigate to server directory
-cd apps/server
-
-# Generate Prisma client
-pnpm prisma:generate
-
-# Run database migrations
-pnpm prisma:migrate
-
-# Return to root directory
-cd ../..
-```
-
-## Step 7: Start the Development Servers
-
-You can either start all services at once or individually:
-
-### Option A: Start All Services (Recommended)
-
-```bash
-# From the root directory
+# Start both frontend and backend (choose one)
+npm run dev
+# or
 pnpm dev
 ```
 
@@ -144,21 +75,7 @@ This will start:
 - Backend server on http://localhost:3000
 - Frontend on http://localhost:5173
 
-### Option B: Start Services Individually
-
-In separate terminal windows:
-
-```bash
-# Terminal 1: Start backend
-cd apps/server
-pnpm dev
-
-# Terminal 2: Start frontend
-cd apps/client
-pnpm dev
-```
-
-## Step 8: Verify Everything is Running
+## Step 5: Verify Everything is Running
 
 1. **Check Backend Health**:
    - Open http://localhost:3000/health
@@ -168,62 +85,86 @@ pnpm dev
    - Open http://localhost:5173
    - Should see the Perpetu.AI game interface
 
-3. **Check Database Connection**:
-   ```bash
-   cd apps/server
-   pnpm prisma:studio
-   ```
-   This opens a database browser at http://localhost:5555
+3. **Check Data Storage**:
+   - A `./data` directory will be automatically created
+   - Game worlds, characters, and events are stored as JSON files
 
-## Step 9: Test the World Builder
-
-### Using the API
+## Step 6: Upload a Story File
 
 You can test world building with the included sample story:
 
+### Using curl:
 ```bash
-# Read the sample story
-cat sample-story.md
-
-# Test the API (you'll need to send this as a POST request)
-curl -X POST http://localhost:3000/api/worlds/ingest \
-  -H "Content-Type: application/json" \
-  -d @- << 'EOF'
-{
-  "story": "... paste the sample-story.md content here ..."
-}
-EOF
+curl -F "file=@sample-story.md" http://localhost:3000/api/worlds/upload
 ```
 
-### Using the Frontend (Coming Soon)
+### Using the API directly:
+```bash
+curl -X POST http://localhost:3000/api/worlds/ingest \
+  -H "Content-Type: application/json" \
+  -d '{"story": "Your story content here..."}'
+```
 
-In the future, the frontend will have a file upload interface for story ingestion.
+### Response:
+```json
+{
+  "success": true,
+  "world": {
+    "id": "world-1234567890",
+    "name": "The Sacred Valley",
+    ...
+  },
+  "characterCount": 7
+}
+```
+
+The world will be saved in `./data/worlds/world-1234567890.json` and characters in `./data/characters/world-1234567890/*.json`.
+
+## Project Structure
+
+```
+perpetu.ai/
+├── apps/
+│   ├── client/          # React frontend (3-panel HUD)
+│   └── server/          # Fastify backend (API + WebSockets)
+│       └── src/
+│           └── storage.ts  # File-based storage
+├── packages/
+│   ├── models/          # Zod schemas (shared types)
+│   ├── ai/              # OpenAI integration
+│   └── engine/          # Game logic (dice, combat, travel, turns)
+├── data/                # Game state (auto-created, gitignored)
+│   ├── worlds/          # World files
+│   ├── characters/      # Character files by world
+│   └── events/          # Event files by world
+├── GETTING_STARTED.md   # This guide
+├── API.md               # API documentation
+├── sample-story.md      # Example world
+└── README.md            # Project overview
+```
 
 ## Troubleshooting
 
-### "Cannot find module '@prisma/client'"
+### "Cannot find module '@perpetu-ai/...'"
 
 Run:
 ```bash
-cd apps/server
-pnpm prisma:generate
+npm run build
+# or
+pnpm build
 ```
 
-### "connect ECONNREFUSED" (Database)
+### "Missing required environment variable: OPENAI_API_KEY"
 
-- Ensure PostgreSQL is running
-- Verify your DATABASE_URL in `.env` is correct
-- Test connection: `psql postgresql://...your-connection-string...`
-
-### "Redis connection failed"
-
-- Ensure Redis is running: `redis-cli ping` should return `PONG`
-- Verify REDIS_URL in `.env` is correct
+- Ensure you created `.env` from `.env.example`
+- Verify your OPENAI_API_KEY in `.env` is correct
+- Make sure the `.env` file is in the root directory
 
 ### "OpenAI API error: 401"
 
 - Check your OPENAI_API_KEY in `.env` is valid
 - Verify you have credits in your OpenAI account
+- Generate a new API key if the old one was exposed
 
 ### Port already in use
 
@@ -231,66 +172,26 @@ If port 3000 or 5173 is already in use:
 - Change PORT in `.env` for the backend
 - Change port in `apps/client/vite.config.ts` for frontend
 
-## Project Structure
+### Permission errors with ./data directory
 
+The server will automatically create the `./data` directory. If you get permission errors:
+```bash
+mkdir -p ./data
+chmod 755 ./data
 ```
-perpetu.ai/
-├── apps/
-│   ├── client/          # React frontend
-│   │   ├── src/
-│   │   │   ├── components/  # UI components
-│   │   │   ├── store/       # Zustand state
-│   │   │   └── App.tsx      # Main app
-│   │   └── package.json
-│   └── server/          # Fastify backend
-│       ├── prisma/          # Database schema
-│       ├── src/
-│       │   ├── routes/      # API routes
-│       │   ├── services/    # Business logic
-│       │   └── index.ts     # Server entry
-│       └── package.json
-├── packages/
-│   ├── models/          # Zod schemas (shared types)
-│   ├── ai/              # OpenAI integration
-│   └── engine/          # Game logic (dice, combat, travel)
-├── .env                 # Your environment variables (DO NOT COMMIT)
-├── .env.example         # Template for environment variables
-├── sample-story.md      # Example world story
-└── README.md           # Project overview
-```
-
-## Next Steps
-
-1. **Read the sample story**: `sample-story.md` shows the expected format
-2. **Explore the API**: Check `apps/server/src/routes/` for available endpoints
-3. **Customize the UI**: Modify components in `apps/client/src/components/`
-4. **Add game systems**: Extend the engine in `packages/engine/`
-5. **Create your own world**: Write a story and ingest it!
 
 ## Development Tips
 
 - **Hot Reload**: Both frontend and backend support hot reload during development
 - **Type Safety**: All code is TypeScript with strict types
-- **Debugging**: Use VSCode's debugger with the included launch configs (coming soon)
-- **Database GUI**: Use `pnpm prisma:studio` to browse your database
-- **Redis CLI**: Use `redis-cli` to inspect Redis data
+- **File Storage**: Game state is human-readable JSON in `./data`
+- **No Database Setup**: Everything just works out of the box!
 
-## Additional Resources
+## Next Steps
 
-- [Fastify Documentation](https://www.fastify.io/)
-- [React Documentation](https://react.dev/)
-- [Prisma Documentation](https://www.prisma.io/docs)
-- [OpenAI API Documentation](https://platform.openai.com/docs)
-- [Zustand Documentation](https://zustand-demo.pmnd.rs/)
-- [React Flow Documentation](https://reactflow.dev/)
-
-## Need Help?
-
-If you encounter issues not covered here, check:
-1. All services are running (PostgreSQL, Redis, backend, frontend)
-2. Environment variables are set correctly in `.env`
-3. Dependencies are installed: `pnpm install`
-4. Packages are built: `pnpm -r build`
-5. Database is migrated: `cd apps/server && pnpm prisma:migrate`
+1. **Upload a story**: Use the sample-story.md or create your own
+2. **Explore the API**: Check API.md for available endpoints
+3. **Customize the UI**: Modify components in `apps/client/src/components/`
+4. **Add game systems**: Extend the engine in `packages/engine/`
 
 Happy Gaming! 🎮
