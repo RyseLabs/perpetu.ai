@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model World {
+  id          String   @id @default(cuid())
+  name        String
+  description String   @db.Text
+  mapData     Json     // WorldMap schema
+  currentTurn Int      @default(0)
+  factions    String[]
+  createdAt   DateTime @default(now())
+  lastUpdated DateTime @updatedAt
+  
+  characters Character[]
+  events     WorldEvent[]
+  
+  @@index([currentTurn])
+}
+
+model Character {
+  id               String   @id @default(cuid())
+  worldId          String
+  name             String
+  description      String?  @db.Text
+  advancementTier  String
+  madraCore        Json     // MadraCore schema
+  techniques       Json     // Technique[] schema
+  stats            Json     // CharacterStats schema
+  inventory        Json     // Item[] schema
+  position         Json     // Position schema
+  activity         String   @default("idle")
+  currentGoal      String?
+  timeline         Json     // TimelineEvent[] schema
+  faction          String?
+  isPlayerCharacter Boolean @default(false)
+  isInPlayerParty   Boolean @default(false)
+  discoveredByPlayer Boolean @default(false)
+  teacherId        String?
+  createdAt        DateTime @default(now())
+  lastUpdated      DateTime @updatedAt
+  
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  
+  @@index([worldId])
+  @@index([advancementTier])
+  @@index([isPlayerCharacter])
+  @@index([faction])
+}
+
+model WorldEvent {
+  id                    String   @id @default(cuid())
+  worldId               String
+  turn                  Int
+  type                  String
+  involvedCharacterIds  String[]
+  location              Json     // Position schema
+  description           String   @db.Text
+  timestamp             DateTime @default(now())
+  
+  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  
+  @@index([worldId, turn])
+  @@index([type])
+}
+
+model CombatSession {
+  id              String   @id @default(cuid())
+  worldId         String
+  participantIds  String[]
+  turnOrder       String[]
+  currentRound    Int      @default(1)
+  currentTurnIndex Int     @default(0)
+  combatLog       Json     // CombatRound[] schema
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  lastUpdated     DateTime @updatedAt
+  
+  @@index([worldId, active])
+}
