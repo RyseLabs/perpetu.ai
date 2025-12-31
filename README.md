@@ -2,6 +2,27 @@
 
 A proof-of-concept visual AI tabletop RPG maker featuring AI-driven game loops, world simulation, and map visualization.
 
+## 🚀 Quick Start
+
+**New to the project?** Check out the [**Getting Started Guide**](./GETTING_STARTED.md) for complete setup instructions!
+
+```bash
+# Quick setup (requires PostgreSQL, Redis, and OpenAI API key)
+pnpm install
+cp .env.example .env  # Edit this with your credentials
+pnpm -r build
+cd apps/server && pnpm prisma:migrate && cd ../..
+pnpm dev
+```
+
+Then open http://localhost:5173 to see the game interface!
+
+## 📚 Documentation
+
+- **[Getting Started Guide](./GETTING_STARTED.md)** - Detailed setup and installation
+- **[Sample Story](./sample-story.md)** - Example world for testing
+- **[API Documentation](#)** - Coming soon
+
 ## 🔐 Security Notice
 
 **NEVER commit API keys or sensitive credentials to the repository!**
