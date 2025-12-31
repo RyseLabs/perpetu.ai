@@ -16,6 +16,7 @@ export const InfoPanel: React.FC = () => {
   
   // Show location info if selected
   if (selectedLocation) {
+    const { setSelectedCharacter } = useGameStore();
     const playerCharacter = characters.find(c => c.isPlayerCharacter);
     const distance = playerCharacter && playerCharacter.position
       ? calculateDistance(
@@ -26,11 +27,18 @@ export const InfoPanel: React.FC = () => {
         ).toFixed(1)
       : 'N/A';
     
-    const charactersAtLocation = characters.filter(
-      c => c.position && 
-           Math.abs(c.position.x - selectedLocation.position.x) < 1 &&
-           Math.abs(c.position.y - selectedLocation.position.y) < 1
-    );
+    // Find characters at this location (within 3 units)
+    const LOCATION_RADIUS = 3;
+    const charactersAtLocation = characters.filter(c => {
+      if (!c.position || !selectedLocation.position) return false;
+      const dist = calculateDistance(
+        c.position.x,
+        c.position.y,
+        selectedLocation.position.x,
+        selectedLocation.position.y
+      );
+      return dist <= LOCATION_RADIUS;
+    });
     
     return (
       <div className="h-full bg-panel-bg border-l border-panel-border p-4 overflow-y-auto">
@@ -77,13 +85,23 @@ export const InfoPanel: React.FC = () => {
                 {charactersAtLocation.map((character) => (
                   <div
                     key={character.id}
-                    className="p-2 bg-panel-border rounded text-sm"
+                    onClick={() => setSelectedCharacter(character)}
+                    className="p-2 bg-panel-border rounded text-sm cursor-pointer hover:bg-accent-dark transition-colors flex items-center gap-2"
                   >
-                    <div className="font-semibold">
-                      {character.discoveredByPlayer ? character.name : 'Unknown'}
-                    </div>
-                    <div className="text-text-secondary text-xs">
-                      {character.advancementTier}
+                    {character.avatarUrl && (
+                      <img
+                        src={character.avatarUrl}
+                        alt={character.name || 'Unknown'}
+                        className="w-10 h-10 rounded-full object-cover border border-accent"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold">
+                        {character.discoveredByPlayer ? character.name : 'Unknown'}
+                      </div>
+                      <div className="text-text-secondary text-xs">
+                        {character.advancementTier}
+                      </div>
                     </div>
                   </div>
                 ))}

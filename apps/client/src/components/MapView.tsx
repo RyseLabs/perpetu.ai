@@ -20,6 +20,64 @@ function calculateDistance(x1: number, y1: number, x2: number, y2: number): numb
 }
 
 /**
+ * Custom node component for grouped characters on the map
+ */
+const CharacterGroupNode: React.FC<{ data: any }> = ({ data }) => {
+  const { setSelectedCharacter } = useGameStore();
+  const characters = data.characters || [];
+  const [showList, setShowList] = useState(false);
+  
+  return (
+    <div className="relative">
+      {/* Group count badge */}
+      <div className="absolute -top-2 -right-2 bg-accent text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center z-10 shadow-lg">
+        {characters.length}
+      </div>
+      
+      {/* Group pin */}
+      <div
+        onClick={() => setShowList(!showList)}
+        className="cursor-pointer bg-panel-bg border-2 border-accent rounded-lg p-2 min-w-[100px] hover:bg-panel-border transition-colors shadow-lg"
+      >
+        <div className="text-xs font-bold">👥 Group</div>
+        <div className="text-xs text-text-secondary">
+          {characters.length} characters
+        </div>
+      </div>
+      
+      {/* Character list dropdown */}
+      {showList && (
+        <div className="absolute top-full left-0 mt-2 bg-panel-bg border-2 border-panel-border rounded-lg shadow-xl z-50 min-w-[200px] max-h-[300px] overflow-y-auto">
+          {characters.map((char: any) => (
+            <div
+              key={char.id}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedCharacter(char);
+                setShowList(false);
+              }}
+              className="p-2 hover:bg-panel-border cursor-pointer flex items-center gap-2 border-b border-panel-border last:border-b-0"
+            >
+              {char.avatarUrl && (
+                <img
+                  src={char.avatarUrl}
+                  alt={char.name || 'Unknown'}
+                  className="w-8 h-8 rounded-full object-cover border border-accent"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-semibold truncate">{char.name || 'Unknown'}</div>
+                <div className="text-xs text-text-secondary truncate">{char.advancementTier || 'Unknown'}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
  * Custom node component for characters on the map
  */
 const CharacterNode: React.FC<{ data: any }> = ({ data }) => {
@@ -149,6 +207,7 @@ const LocationNode: React.FC<{ data: any }> = ({ data }) => {
 
 const nodeTypes: NodeTypes = {
   character: CharacterNode,
+  characterGroup: CharacterGroupNode,
   location: LocationNode,
 };
 
@@ -164,76 +223,135 @@ export const MapView: React.FC = () => {
     console.log('MapView - Characters:', characters);
   }, [world, characters]);
   
-  // Convert characters and locations to React Flow nodes
-  const characterNodes: Node[] = Array.isArray(characters)
-    ? characters
-        .filter((character) => character?.position && typeof character.position.x === 'number' && typeof character.position.y === 'number')
-        .map((character) => ({
-          id: `char-${character.id}`,
-          type: 'character',
-          position: { x: character.position.x * 100, y: character.position.y * 100 },
-          data: { character },
-        }))
-    : [];
+  /**
+   * Group characters by proximity (within 3 units considered same position)
+   */
+  const groupCharactersByPosition = (chars: any[]): Map<string, any[]> => {
+    const GROUPING_DISTANCE = 3;
+    const groups = new Map<string, any[]>();
+    
+    chars.forEach(char => {
+      if (!char?.position) return;
+      
+      // Find existing group within grouping distance
+      let foundGroup = false;
+      for (const [key, group] of groups.entries()) {
+        const [x, y] = key.split(',').map(Number);
+        const distance = calculateDistance(char.position.x, char.position.y, x, y);
+        
+        if (distance <= GROUPING_DISTANCE) {
+          group.push(char);
+          foundGroup = true;
+          break;
+        }
+      }
+      
+      // Create new group if none found nearby
+      if (!foundGroup) {
+        const key = `${char.position.x.toFixed(1)},${char.position.y.toFixed(1)}`;
+        groups.set(key, [char]);
+      }
+    });
+    
+    return groups;
+  };
   
-  const locationNodes: Node[] = world?.map?.locations && Array.isArray(world.map.locations)
-    ? world.map.locations
-        .filter((location) => location?.position && typeof location.position.x === 'number' && typeof location.position.y === 'number')
-        .map((location) => ({
-          id: `loc-${location.id}`,
-          type: 'location',
-          position: { x: location.position.x * 100, y: location.position.y * 100 },
-          data: { location },
-        }))
-    : [];
+  /**
+   * Find characters at a specific location (within 3 units)
+   */
+  const getCharactersAtLocation = (location: any, allChars: any[]): any[] => {
+    const LOCATION_RADIUS = 3;
+    
+    return allChars.filter(char => {
+      if (!char?.position || !location?.position) return false;
+      const distance = calculateDistance(
+        char.position.x,
+        char.position.y,
+        location.position.x,
+        location.position.y
+      );
+      return distance <= LOCATION_RADIUS;
+    });
+  };
   
-  const allNodes = [...characterNodes, ...locationNodes];
-  
-  const [nodes, setNodes, onNodesChange] = useNodesState(allNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [, , onEdgesChange] = useEdgesState([]);
   
   // Update nodes when characters or locations change
   React.useEffect(() => {
-    const newCharacterNodes: Node[] = Array.isArray(characters)
-      ? characters
-          .filter((character) => {
-            // Only validate position - show ALL characters with valid positions
-            // Discovery is handled in the InfoPanel, not on the map
-            if (!character || !character.position || typeof character.position.x !== 'number' || typeof character.position.y !== 'number') {
-              if (character) {
-                console.warn('Character missing valid position:', character.name, character.position);
-              }
-              return false;
-            }
-            return true;
-          })
-          .map((character) => ({
-            id: `char-${character.id}`,
-            type: 'character',
-            position: { x: character.position.x * 100, y: character.position.y * 100 },
-            data: { character },
-          }))
+    if (!world || !Array.isArray(characters)) {
+      setNodes([]);
+      return;
+    }
+    
+    // Get valid locations
+    const validLocations = world?.map?.locations && Array.isArray(world.map.locations)
+      ? world.map.locations.filter(loc => {
+          if (!loc || !loc.discoveredByPlayer) return false;
+          if (!loc.position || typeof loc.position.x !== 'number' || typeof loc.position.y !== 'number') {
+            console.warn('Location missing valid position:', loc?.name, loc?.position);
+            return false;
+          }
+          return true;
+        })
       : [];
     
-    const newLocationNodes: Node[] = world?.map?.locations && Array.isArray(world.map.locations)
-      ? world.map.locations
-          .filter(loc => {
-            if (!loc || !loc.discoveredByPlayer) return false; // Only show discovered locations
-            if (!loc.position || typeof loc.position.x !== 'number' || typeof loc.position.y !== 'number') {
-              console.warn('Location missing valid position:', loc.name, loc.position);
-              return false;
-            }
-            return true;
-          })
-          .map((location) => ({
-            id: `loc-${location.id}`,
-            type: 'location',
-            position: { x: location.position.x * 100, y: location.position.y * 100 },
-            data: { location },
-          }))
-      : [];
+    // Get valid characters with positions
+    const validCharacters = characters.filter(char => {
+      if (!char || !char.position || typeof char.position.x !== 'number' || typeof char.position.y !== 'number') {
+        if (char) {
+          console.warn('Character missing valid position:', char.name, char.position);
+        }
+        return false;
+      }
+      return true;
+    });
     
-    setNodes([...newCharacterNodes, ...newLocationNodes]);
+    // Step 1: Create location nodes
+    const locationNodes: Node[] = validLocations.map((location) => ({
+      id: `loc-${location.id}`,
+      type: 'location',
+      position: { x: location.position.x * 100, y: location.position.y * 100 },
+      data: { location },
+    }));
+    
+    // Step 2: Find characters at locations (these won't get separate pins)
+    const charactersAtLocations = new Set<string>();
+    validLocations.forEach(loc => {
+      const charsHere = getCharactersAtLocation(loc, validCharacters);
+      charsHere.forEach(char => charactersAtLocations.add(char.id));
+    });
+    
+    // Step 3: Group remaining characters by position
+    const ungroupedCharacters = validCharacters.filter(
+      char => !charactersAtLocations.has(char.id)
+    );
+    const characterGroups = groupCharactersByPosition(ungroupedCharacters);
+    
+    // Step 4: Create character/group nodes
+    const characterNodes: Node[] = Array.from(characterGroups.entries()).map(([key, chars]) => {
+      if (chars.length === 1) {
+        // Solo character node
+        const char = chars[0];
+        return {
+          id: `char-${char.id}`,
+          type: 'character',
+          position: { x: char.position.x * 100, y: char.position.y * 100 },
+          data: { character: char },
+        };
+      } else {
+        // Group node
+        const [x, y] = key.split(',').map(Number);
+        return {
+          id: `group-${key}`,
+          type: 'characterGroup',
+          position: { x: x * 100, y: y * 100 },
+          data: { characters: chars },
+        };
+      }
+    });
+    
+    setNodes([...locationNodes, ...characterNodes]);
   }, [characters, world, setNodes]);
   
   if (!world) {
