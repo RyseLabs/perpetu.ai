@@ -13,7 +13,7 @@ interface GameState {
   // Chat messages
   chatMessages: Array<{
     id: string;
-    sender: 'player' | 'gm';
+    sender: 'player' | 'gm' | 'system';
     content: string;
     timestamp: number;
   }>;
@@ -21,15 +21,21 @@ interface GameState {
   // WebSocket connection
   connected: boolean;
   
+  // World building state
+  isWorldBuilding: boolean;
+  worldBuildingError: string | null;
+  
   // Actions
   setWorld: (world: World) => void;
   setCharacters: (characters: Character[]) => void;
   addCharacter: (character: Character) => void;
   updateCharacter: (characterId: string, updates: Partial<Character>) => void;
   setSelectedCharacter: (character: Character | null) => void;
-  addChatMessage: (sender: 'player' | 'gm', content: string) => void;
+  addChatMessage: (sender: 'player' | 'gm' | 'system', content: string) => void;
+  clearChatMessages: () => void;
   addEvent: (event: WorldEvent) => void;
   setConnected: (connected: boolean) => void;
+  setWorldBuilding: (isBuilding: boolean, error?: string | null) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -39,6 +45,8 @@ export const useGameStore = create<GameState>((set) => ({
   selectedCharacter: null,
   chatMessages: [],
   connected: false,
+  isWorldBuilding: false,
+  worldBuildingError: null,
   
   setWorld: (world) => set({ world }),
   
@@ -75,10 +83,15 @@ export const useGameStore = create<GameState>((set) => ({
       ],
     })),
   
+  clearChatMessages: () => set({ chatMessages: [] }),
+  
   addEvent: (event) =>
     set((state) => ({
       events: [...state.events, event],
     })),
   
   setConnected: (connected) => set({ connected }),
+  
+  setWorldBuilding: (isBuilding, error = null) => 
+    set({ isWorldBuilding: isBuilding, worldBuildingError: error }),
 }));

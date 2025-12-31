@@ -9,19 +9,13 @@ import { useGameStore } from './store/gameStore';
  * Main application component with HUD layout
  */
 function App() {
-  const { world, connected, setConnected, addChatMessage } = useGameStore();
+  const { world, connected, setConnected } = useGameStore();
   
   useEffect(() => {
     // TODO: Initialize WebSocket connection
     // For now, just mark as connected
     setConnected(true);
-    
-    // Welcome message
-    addChatMessage(
-      'gm',
-      'Welcome to Perpetu.AI! Upload a story file to begin your adventure.'
-    );
-  }, [setConnected, addChatMessage]);
+  }, [setConnected]);
   
   return (
     <div className="h-screen w-screen bg-game-bg flex flex-col overflow-hidden">
