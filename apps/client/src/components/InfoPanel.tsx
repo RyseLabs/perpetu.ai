@@ -159,19 +159,26 @@ export const InfoPanel: React.FC = () => {
             </div>
             
             {/* Stats */}
-            <div>
-              <h4 className="font-semibold mb-2">Stats</h4>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>HP: {selectedCharacter.stats.currentHp}/{selectedCharacter.stats.maxHp}</div>
-                <div>AC: {selectedCharacter.stats.armorClass}</div>
-                <div>STR: {selectedCharacter.stats.strength}</div>
-                <div>DEX: {selectedCharacter.stats.dexterity}</div>
-                <div>CON: {selectedCharacter.stats.constitution}</div>
-                <div>INT: {selectedCharacter.stats.intelligence}</div>
-                <div>WIS: {selectedCharacter.stats.wisdom}</div>
-                <div>CHA: {selectedCharacter.stats.charisma}</div>
+            {selectedCharacter.stats ? (
+              <div>
+                <h4 className="font-semibold mb-2">Stats</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>HP: {selectedCharacter.stats.currentHp ?? 0}/{selectedCharacter.stats.maxHp ?? 0}</div>
+                  <div>AC: {selectedCharacter.stats.armorClass ?? 0}</div>
+                  <div>STR: {selectedCharacter.stats.strength ?? 0}</div>
+                  <div>DEX: {selectedCharacter.stats.dexterity ?? 0}</div>
+                  <div>CON: {selectedCharacter.stats.constitution ?? 0}</div>
+                  <div>INT: {selectedCharacter.stats.intelligence ?? 0}</div>
+                  <div>WIS: {selectedCharacter.stats.wisdom ?? 0}</div>
+                  <div>CHA: {selectedCharacter.stats.charisma ?? 0}</div>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div>
+                <h4 className="font-semibold mb-2">Stats</h4>
+                <div className="text-sm text-text-secondary">Stats data not available</div>
+              </div>
+            )}
             
             {/* Madra Core */}
             <div>
@@ -199,7 +206,7 @@ export const InfoPanel: React.FC = () => {
             </div>
             
             {/* Techniques */}
-            {selectedCharacter.techniques.length > 0 && (
+            {selectedCharacter.techniques && selectedCharacter.techniques.length > 0 && (
               <div>
                 <h4 className="font-semibold mb-2">Techniques</h4>
                 <div className="space-y-2">
@@ -208,9 +215,9 @@ export const InfoPanel: React.FC = () => {
                       key={technique.id}
                       className="p-2 bg-panel-border rounded text-sm"
                     >
-                      <div className="font-semibold">{technique.name}</div>
+                      <div className="font-semibold">{technique.name || 'Unknown Technique'}</div>
                       <div className="text-text-secondary text-xs">
-                        {technique.nature} • Cost: {technique.madraCost} • Tier: {technique.requiredTier}
+                        {technique.nature || 'Unknown'} • Cost: {technique.madraCost || 0} • Tier: {technique.requiredTier || 'Unknown'}
                       </div>
                     </div>
                   ))}
@@ -219,7 +226,7 @@ export const InfoPanel: React.FC = () => {
             )}
             
             {/* Equipment (Weapons & Armor) */}
-            {selectedCharacter.inventory.some(i => ['weapon', 'armor'].includes(i.type)) && (
+            {selectedCharacter.inventory && selectedCharacter.inventory.some(i => ['weapon', 'armor'].includes(i.type)) && (
               <div>
                 <h4 className="font-semibold mb-2">Equipment</h4>
                 <div className="space-y-2">
@@ -231,9 +238,9 @@ export const InfoPanel: React.FC = () => {
                         className="p-2 bg-panel-border rounded text-sm"
                       >
                         <div className="flex justify-between">
-                          <span className="font-semibold">{item.name}</span>
+                          <span className="font-semibold">{item.name || 'Unknown Item'}</span>
                           <span className="text-text-secondary text-xs capitalize">
-                            {item.type}
+                            {item.type || 'item'}
                           </span>
                         </div>
                         {item.description && (
@@ -253,7 +260,7 @@ export const InfoPanel: React.FC = () => {
             )}
             
             {/* Other Items (Consumables, Quest Items, etc.) */}
-            {selectedCharacter.inventory.some(i => !['weapon', 'armor'].includes(i.type)) && (
+            {selectedCharacter.inventory && selectedCharacter.inventory.some(i => !['weapon', 'armor'].includes(i.type)) && (
               <div>
                 <h4 className="font-semibold mb-2">Other Items</h4>
                 <div className="space-y-1 text-sm">
@@ -261,8 +268,8 @@ export const InfoPanel: React.FC = () => {
                     .filter(i => !['weapon', 'armor'].includes(i.type))
                     .map((item) => (
                       <div key={item.id} className="flex justify-between">
-                        <span>{item.name}</span>
-                        <span className="text-text-secondary">x{item.quantity}</span>
+                        <span>{item.name || 'Unknown Item'}</span>
+                        <span className="text-text-secondary">x{item.quantity || 1}</span>
                       </div>
                     ))}
                 </div>

@@ -26,21 +26,28 @@ const CharacterNode: React.FC<{ data: any }> = ({ data }) => {
   const { setSelectedCharacter } = useGameStore();
   const character = data.character;
   
+  // Safe access with fallbacks
+  const name = character?.name || 'Unknown';
+  const tier = character?.advancementTier || 'Unknown';
+  const isDiscovered = character?.discoveredByPlayer || false;
+  const isPlayer = character?.isPlayerCharacter || false;
+  const isInParty = character?.isInPlayerParty || false;
+  
   return (
     <div
       onClick={() => setSelectedCharacter(character)}
       className="cursor-pointer bg-panel-bg border-2 border-accent rounded-lg p-2 min-w-[100px] hover:bg-panel-border transition-colors shadow-lg"
       style={{
-        borderColor: character.isInPlayerParty ? '#6366f1' : character.isPlayerCharacter ? '#10b981' : '#2a2a2a',
+        borderColor: isInParty ? '#6366f1' : isPlayer ? '#10b981' : '#2a2a2a',
       }}
     >
       <div className="text-xs font-bold truncate">
-        {character.discoveredByPlayer ? character.name : 'Unknown'}
+        {isDiscovered ? name : 'Unknown'}
       </div>
       <div className="text-xs text-text-secondary">
-        {character.advancementTier}
+        {tier}
       </div>
-      {character.isPlayerCharacter && (
+      {isPlayer && (
         <div className="text-xs text-green-400 font-bold">★ You</div>
       )}
     </div>
@@ -57,7 +64,7 @@ const LocationNode: React.FC<{ data: any }> = ({ data }) => {
   
   // Calculate distance from player
   const playerCharacter = characters.find(c => c.isPlayerCharacter);
-  const distance = playerCharacter 
+  const distance = playerCharacter && playerCharacter.position
     ? calculateDistance(
         playerCharacter.position.x,
         playerCharacter.position.y,
@@ -84,6 +91,9 @@ const LocationNode: React.FC<{ data: any }> = ({ data }) => {
     other: '📍',
   };
   
+  const locationType = location.type || 'other';
+  const locationName = location.name || 'Unknown Location';
+  
   return (
     <div
       onClick={() => setSelectedLocation(location)}
@@ -93,16 +103,16 @@ const LocationNode: React.FC<{ data: any }> = ({ data }) => {
     >
       <div
         className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition-transform"
-        style={{ backgroundColor: locationTypeColors[location.type] || '#6b7280' }}
+        style={{ backgroundColor: locationTypeColors[locationType] || '#6b7280' }}
       >
-        <span className="text-lg">{locationTypeIcons[location.type] || '📍'}</span>
+        <span className="text-lg">{locationTypeIcons[locationType] || '📍'}</span>
       </div>
       
       {showTooltip && (
         <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-panel-bg border border-panel-border rounded-lg p-2 shadow-xl z-50 whitespace-nowrap">
-          <div className="text-xs font-bold text-accent">{location.name}</div>
-          <div className="text-xs text-text-secondary capitalize">{location.type}</div>
-          {playerCharacter && (
+          <div className="text-xs font-bold text-accent">{locationName}</div>
+          <div className="text-xs text-text-secondary capitalize">{locationType}</div>
+          {playerCharacter && playerCharacter.position && (
             <div className="text-xs text-text-secondary">Distance: {distance} units</div>
           )}
         </div>
@@ -129,23 +139,27 @@ export const MapView: React.FC = () => {
   }, [world, characters]);
   
   // Convert characters and locations to React Flow nodes
-  const characterNodes: Node[] = characters
-    .filter((character) => character.position && typeof character.position.x === 'number' && typeof character.position.y === 'number')
-    .map((character) => ({
-      id: `char-${character.id}`,
-      type: 'character',
-      position: { x: character.position.x * 100, y: character.position.y * 100 },
-      data: { character },
-    }));
+  const characterNodes: Node[] = Array.isArray(characters)
+    ? characters
+        .filter((character) => character?.position && typeof character.position.x === 'number' && typeof character.position.y === 'number')
+        .map((character) => ({
+          id: `char-${character.id}`,
+          type: 'character',
+          position: { x: character.position.x * 100, y: character.position.y * 100 },
+          data: { character },
+        }))
+    : [];
   
-  const locationNodes: Node[] = world?.map?.locations
-    ?.filter((location) => location.position && typeof location.position.x === 'number' && typeof location.position.y === 'number')
-    ?.map((location) => ({
-      id: `loc-${location.id}`,
-      type: 'location',
-      position: { x: location.position.x * 100, y: location.position.y * 100 },
-      data: { location },
-    })) || [];
+  const locationNodes: Node[] = world?.map?.locations && Array.isArray(world.map.locations)
+    ? world.map.locations
+        .filter((location) => location?.position && typeof location.position.x === 'number' && typeof location.position.y === 'number')
+        .map((location) => ({
+          id: `loc-${location.id}`,
+          type: 'location',
+          position: { x: location.position.x * 100, y: location.position.y * 100 },
+          data: { location },
+        }))
+    : [];
   
   const allNodes = [...characterNodes, ...locationNodes];
   
@@ -154,38 +168,44 @@ export const MapView: React.FC = () => {
   
   // Update nodes when characters or locations change
   React.useEffect(() => {
-    const newCharacterNodes: Node[] = characters
-      .filter((character) => {
-        // Only validate position - show ALL characters with valid positions
-        // Discovery is handled in the InfoPanel, not on the map
-        if (!character.position || typeof character.position.x !== 'number' || typeof character.position.y !== 'number') {
-          console.warn('Character missing valid position:', character.name, character.position);
-          return false;
-        }
-        return true;
-      })
-      .map((character) => ({
-        id: `char-${character.id}`,
-        type: 'character',
-        position: { x: character.position.x * 100, y: character.position.y * 100 },
-        data: { character },
-      }));
+    const newCharacterNodes: Node[] = Array.isArray(characters)
+      ? characters
+          .filter((character) => {
+            // Only validate position - show ALL characters with valid positions
+            // Discovery is handled in the InfoPanel, not on the map
+            if (!character || !character.position || typeof character.position.x !== 'number' || typeof character.position.y !== 'number') {
+              if (character) {
+                console.warn('Character missing valid position:', character.name, character.position);
+              }
+              return false;
+            }
+            return true;
+          })
+          .map((character) => ({
+            id: `char-${character.id}`,
+            type: 'character',
+            position: { x: character.position.x * 100, y: character.position.y * 100 },
+            data: { character },
+          }))
+      : [];
     
-    const newLocationNodes: Node[] = world?.map?.locations
-      ?.filter(loc => {
-        if (!loc.discoveredByPlayer) return false; // Only show discovered locations
-        if (!loc.position || typeof loc.position.x !== 'number' || typeof loc.position.y !== 'number') {
-          console.warn('Location missing valid position:', loc.name, loc.position);
-          return false;
-        }
-        return true;
-      })
-      .map((location) => ({
-        id: `loc-${location.id}`,
-        type: 'location',
-        position: { x: location.position.x * 100, y: location.position.y * 100 },
-        data: { location },
-      })) || [];
+    const newLocationNodes: Node[] = world?.map?.locations && Array.isArray(world.map.locations)
+      ? world.map.locations
+          .filter(loc => {
+            if (!loc || !loc.discoveredByPlayer) return false; // Only show discovered locations
+            if (!loc.position || typeof loc.position.x !== 'number' || typeof loc.position.y !== 'number') {
+              console.warn('Location missing valid position:', loc.name, loc.position);
+              return false;
+            }
+            return true;
+          })
+          .map((location) => ({
+            id: `loc-${location.id}`,
+            type: 'location',
+            position: { x: location.position.x * 100, y: location.position.y * 100 },
+            data: { location },
+          }))
+      : [];
     
     setNodes([...newCharacterNodes, ...newLocationNodes]);
   }, [characters, world, setNodes]);

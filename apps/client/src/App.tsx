@@ -4,6 +4,7 @@ import { MapView } from './components/MapView';
 import { ChatPanel } from './components/ChatPanel';
 import { InfoPanel } from './components/InfoPanel';
 import { WorldSelector } from './components/WorldSelector';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { useGameStore } from './store/gameStore';
 
 /**
@@ -42,25 +43,33 @@ function App() {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - Party */}
         <div className="w-64 flex-shrink-0">
-          <PartyPanel />
+          <ErrorBoundary>
+            <PartyPanel />
+          </ErrorBoundary>
         </div>
         
         {/* Center Panel - Map & Chat */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Map (top 60%) */}
           <div className="flex-[6] overflow-hidden">
-            <MapView />
+            <ErrorBoundary>
+              <MapView />
+            </ErrorBoundary>
           </div>
           
           {/* Chat (bottom 40%) */}
           <div className="flex-[4] overflow-hidden">
-            <ChatPanel />
+            <ErrorBoundary>
+              <ChatPanel />
+            </ErrorBoundary>
           </div>
         </div>
         
         {/* Right Panel - Character Info */}
         <div className="w-80 flex-shrink-0">
-          <InfoPanel />
+          <ErrorBoundary>
+            <InfoPanel />
+          </ErrorBoundary>
         </div>
       </div>
     </div>

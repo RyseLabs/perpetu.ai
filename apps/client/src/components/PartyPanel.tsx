@@ -17,23 +17,31 @@ export const PartyPanel: React.FC = () => {
         <p className="text-text-secondary text-sm">No party members yet</p>
       ) : (
         <div className="space-y-2">
-          {partyMembers.map((character) => (
-            <button
-              key={character.id}
-              onClick={() => setSelectedCharacter(character)}
-              className={`w-full text-left p-3 rounded-lg transition-colors ${
-                selectedCharacter?.id === character.id
-                  ? 'bg-accent text-white'
-                  : 'bg-panel-border hover:bg-opacity-50'
-              }`}
-            >
-              <div className="font-semibold">{character.name}</div>
-              <div className="text-sm opacity-75">{character.advancementTier}</div>
-              <div className="text-xs mt-1">
-                HP: {character.stats.currentHp}/{character.stats.maxHp}
-              </div>
-            </button>
-          ))}
+          {partyMembers.map((character) => {
+            // Safe access to stats with fallbacks
+            const currentHp = character.stats?.currentHp ?? 0;
+            const maxHp = character.stats?.maxHp ?? 0;
+            const name = character.name || 'Unknown Character';
+            const tier = character.advancementTier || 'Unknown';
+            
+            return (
+              <button
+                key={character.id}
+                onClick={() => setSelectedCharacter(character)}
+                className={`w-full text-left p-3 rounded-lg transition-colors ${
+                  selectedCharacter?.id === character.id
+                    ? 'bg-accent text-white'
+                    : 'bg-panel-border hover:bg-opacity-50'
+                }`}
+              >
+                <div className="font-semibold">{name}</div>
+                <div className="text-sm opacity-75">{tier}</div>
+                <div className="text-xs mt-1">
+                  HP: {currentHp}/{maxHp}
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
