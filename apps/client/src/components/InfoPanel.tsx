@@ -177,10 +177,10 @@ export const InfoPanel: React.FC = () => {
             <div>
               <h4 className="font-semibold mb-2">Madra Core</h4>
               <div className="text-sm space-y-1">
-                <div>Nature: {selectedCharacter.madraCore.nature}</div>
+                <div>Nature: {selectedCharacter.madraCore?.nature || 'N/A'}</div>
                 <div>
-                  Capacity: {selectedCharacter.madraCore.currentMadra}/
-                  {selectedCharacter.madraCore.maxMadra}
+                  Capacity: {selectedCharacter.madraCore?.currentMadra || 0}/
+                  {selectedCharacter.madraCore?.maxMadra || 0}
                 </div>
               </div>
             </div>

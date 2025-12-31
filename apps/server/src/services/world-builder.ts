@@ -92,6 +92,15 @@ export class WorldBuilderService {
     
     await fileStorage.saveWorld(world);
     
+    // Mark all initial locations as discovered so they show on the map
+    if (world.map && world.map.locations) {
+      world.map.locations = world.map.locations.map(loc => ({
+        ...loc,
+        discoveredByPlayer: true,
+      }));
+      await fileStorage.saveWorld(world);
+    }
+    
     // Create characters in file storage
     const characters: Character[] = [];
     for (const charData of worldData.characters) {
@@ -99,6 +108,7 @@ export class WorldBuilderService {
       const character: Character = {
         ...charData,
         id: characterId,
+        discoveredByPlayer: true, // Mark initial NPCs as discovered
         createdAt: now,
         lastUpdated: now,
       };
