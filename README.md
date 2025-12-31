@@ -7,21 +7,28 @@ A proof-of-concept visual AI tabletop RPG maker featuring AI-driven game loops, 
 **New to the project?** Check out the [**Getting Started Guide**](./GETTING_STARTED.md) for complete setup instructions!
 
 ```bash
-# Quick setup (requires PostgreSQL, Redis, and OpenAI API key)
-pnpm install
-cp .env.example .env  # Edit this with your credentials
-pnpm -r build
-cd apps/server && pnpm prisma:migrate && cd ../..
-pnpm dev
+# 1. Install dependencies (npm or pnpm)
+npm install
+# or: pnpm install
+
+# 2. Configure OpenAI API key
+cp .env.example .env
+# Edit .env and add your OPENAI_API_KEY
+
+# 3. Start the application
+npm run dev
+# or: pnpm dev
 ```
 
 Then open http://localhost:5173 to see the game interface!
+
+✨ **No Docker, PostgreSQL, or Redis required!** Game state is stored in local files.
 
 ## 📚 Documentation
 
 - **[Getting Started Guide](./GETTING_STARTED.md)** - Detailed setup and installation
 - **[Sample Story](./sample-story.md)** - Example world for testing
-- **[API Documentation](#)** - Coming soon
+- **[API Documentation](./API.md)** - API reference
 
 ## 🔐 Security Notice
 
@@ -30,7 +37,7 @@ Then open http://localhost:5173 to see the game interface!
 This project uses environment variables for all sensitive configuration. Before running the application:
 
 1. Copy `.env.example` to `.env`
-2. Fill in your actual API keys and credentials in `.env`
+2. Fill in your actual OpenAI API key in `.env`
 3. Ensure `.env` is listed in `.gitignore` (it is by default)
 
 ## 🏗️ Architecture

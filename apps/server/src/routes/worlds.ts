@@ -8,8 +8,47 @@ const worldBuilderService = new WorldBuilderService();
  */
 export const worldRoutes: FastifyPluginAsync = async (fastify) => {
   /**
+   * POST /api/worlds/upload
+   * Upload a story file to generate a new world (multipart/form-data)
+   */
+  fastify.post('/upload', async (request, reply) => {
+    try {
+      const data = await request.file();
+      
+      if (!data) {
+        return reply.code(400).send({
+          error: 'No file uploaded',
+        });
+      }
+      
+      const buffer = await data.toBuffer();
+      const story = buffer.toString('utf-8');
+      
+      if (!story || story.trim().length === 0) {
+        return reply.code(400).send({
+          error: 'Story file is empty',
+        });
+      }
+      
+      const result = await worldBuilderService.ingestStory(story);
+      
+      return reply.code(201).send({
+        success: true,
+        world: result.world,
+        characterCount: result.characters.length,
+      });
+    } catch (error) {
+      console.error('World upload error:', error);
+      return reply.code(500).send({
+        error: 'Failed to upload story',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+  
+  /**
    * POST /api/worlds/ingest
-   * Upload a story file to generate a new world
+   * Upload a story via JSON to generate a new world
    */
   fastify.post<{
     Body: { story: string };
@@ -34,6 +73,27 @@ export const worldRoutes: FastifyPluginAsync = async (fastify) => {
       console.error('World ingestion error:', error);
       return reply.code(500).send({
         error: 'Failed to ingest story',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+  
+  /**
+   * GET /api/worlds
+   * List all worlds
+   */
+  fastify.get('/', async (_request, reply) => {
+    try {
+      const worlds = await worldBuilderService.listWorlds();
+      
+      return reply.send({
+        success: true,
+        worlds,
+      });
+    } catch (error) {
+      console.error('List worlds error:', error);
+      return reply.code(500).send({
+        error: 'Failed to list worlds',
         message: error instanceof Error ? error.message : 'Unknown error',
       });
     }

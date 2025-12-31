@@ -1,9 +1,11 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
+import multipart from '@fastify/multipart';
 import { config } from './config.js';
 import { worldRoutes } from './routes/worlds.js';
 import { websocketRoutes } from './routes/websocket.js';
+import { fileStorage } from './storage.js';
 
 const fastify = Fastify({
   logger: {
@@ -23,6 +25,13 @@ async function registerPlugins() {
   
   // WebSocket support
   await fastify.register(websocket);
+  
+  // File upload support
+  await fastify.register(multipart, {
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB max file size
+    },
+  });
 }
 
 /**
@@ -46,6 +55,10 @@ async function registerRoutes() {
  */
 async function start() {
   try {
+    // Initialize file storage
+    await fileStorage.init();
+    console.log('File storage initialized');
+    
     await registerPlugins();
     await registerRoutes();
     
@@ -61,6 +74,7 @@ async function start() {
 │  Server:     http://${config.host}:${config.port}       │
 │  Health:     http://${config.host}:${config.port}/health │
 │  Environment: ${config.nodeEnv.padEnd(28)} │
+│  Storage:     ${config.dataDir.padEnd(28)} │
 └─────────────────────────────────────────────┘
     `);
   } catch (error) {
