@@ -35,22 +35,85 @@ export function generateWorldBuilderPrompt(storyContent: string): string {
 
 ${storyContent}
 
-Generate a JSON response with:
-1. World metadata (name, description)
-2. Map dimensions (width, height in map units)
-3. Locations array with:
-   - Name, description, type, position
-   - Faction ownership if applicable
-4. Characters array (limit to 10-20 key characters) with:
-   - Name, description
-   - Advancement tier (realistic distribution)
-   - Madra core (nature, capacity based on tier)
-   - Starting position on map
-   - Faction affiliation
-   - 3-5 timeline events with specific turn numbers
-   - Initial stats appropriate for their tier
+Generate a JSON response with this EXACT structure:
 
-Ensure the world feels alive with characters having their own goals and motivations.`;
+{
+  "world": {
+    "name": "World Name",
+    "description": "World description",
+    "map": {
+      "name": "World Name",
+      "description": "Map description",
+      "width": 100,
+      "height": 100,
+      "locations": [
+        {
+          "name": "Location Name",
+          "description": "Location description",
+          "position": { "x": 10.5, "y": 20.3 },
+          "type": "city" | "town" | "dungeon" | "landmark" | "wilderness" | "other",
+          "discoveredByPlayer": false,
+          "faction": "optional faction name"
+        }
+      ]
+    },
+    "currentTurn": 0,
+    "characterIds": [],
+    "factions": ["faction1", "faction2"]
+  },
+  "characters": [
+    {
+      "name": "Character Name",
+      "description": "Character background",
+      "advancementTier": "Foundation" | "Iron" | "Jade" | "LowGold" | "HighGold" | "TrueGold" | "Underlord" | "Overlord" | "Archlord" | "Herald" | "Sage" | "Monarch",
+      "madraCore": {
+        "nature": "Pure" | "Fire" | "Water" | "Earth" | etc.,
+        "currentMadra": 100,
+        "maxMadra": 100
+      },
+      "stats": {
+        "strength": 10,
+        "dexterity": 10,
+        "constitution": 10,
+        "intelligence": 10,
+        "wisdom": 10,
+        "charisma": 10,
+        "maxHp": 30,
+        "currentHp": 30,
+        "armorClass": 12,
+        "initiative": 0,
+        "tierBonus": 0
+      },
+      "position": { "x": 15.0, "y": 25.0 },
+      "activity": "idle",
+      "currentGoal": "Character's immediate goal",
+      "timeline": [
+        {
+          "id": "event-1",
+          "turn": 10,
+          "description": "Event description",
+          "action": "move" | "combat" | "interact" | "train" | "custom",
+          "completed": false,
+          "priority": 5
+        }
+      ],
+      "faction": "faction name",
+      "isPlayerCharacter": false,
+      "isInPlayerParty": false,
+      "discoveredByPlayer": false,
+      "techniques": [],
+      "inventory": []
+    }
+  ]
+}
+
+Important:
+- Generate 5-15 key characters with realistic tier distribution (most at Foundation/Iron/Jade)
+- Place characters at appropriate starting locations
+- Give each character 2-4 timeline events
+- Ensure positions fit within map dimensions
+- Make locations diverse (cities, dungeons, landmarks, etc.)
+- Set discoveredByPlayer to false for all locations initially`;
 }
 
 /**

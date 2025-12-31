@@ -122,6 +122,12 @@ const nodeTypes: NodeTypes = {
 export const MapView: React.FC = () => {
   const { world, characters } = useGameStore();
   
+  // Debug logging
+  React.useEffect(() => {
+    console.log('MapView - World:', world);
+    console.log('MapView - Characters:', characters);
+  }, [world, characters]);
+  
   // Convert characters and locations to React Flow nodes
   const characterNodes: Node[] = characters.map((character) => ({
     id: `char-${character.id}`,
@@ -130,7 +136,7 @@ export const MapView: React.FC = () => {
     data: { character },
   }));
   
-  const locationNodes: Node[] = world?.map.locations.map((location) => ({
+  const locationNodes: Node[] = world?.map?.locations?.map((location) => ({
     id: `loc-${location.id}`,
     type: 'location',
     position: { x: location.position.x * 100, y: location.position.y * 100 },
@@ -151,8 +157,8 @@ export const MapView: React.FC = () => {
       data: { character },
     }));
     
-    const newLocationNodes: Node[] = world?.map.locations
-      .filter(loc => loc.discoveredByPlayer) // Only show discovered locations
+    const newLocationNodes: Node[] = world?.map?.locations
+      ?.filter(loc => loc.discoveredByPlayer) // Only show discovered locations
       .map((location) => ({
         id: `loc-${location.id}`,
         type: 'location',
@@ -166,7 +172,19 @@ export const MapView: React.FC = () => {
   if (!world) {
     return (
       <div className="h-full bg-game-bg flex items-center justify-center">
-        <p className="text-text-secondary">No world loaded</p>
+        <p className="text-text-secondary">No world loaded. Create a new world to begin!</p>
+      </div>
+    );
+  }
+  
+  // Safety check for map
+  if (!world.map) {
+    console.error('World has no map property:', world);
+    return (
+      <div className="h-full bg-game-bg flex items-center justify-center">
+        <p className="text-text-secondary text-center">
+          World data is incomplete. Please create a new world.
+        </p>
       </div>
     );
   }
@@ -197,10 +215,10 @@ export const MapView: React.FC = () => {
         <Panel position="top-right" className="bg-panel-bg border border-panel-border rounded p-2 text-xs">
           <div className="font-semibold text-accent mb-1">{world.name}</div>
           <div className="text-text-secondary">
-            Map: {world.map.width} x {world.map.height} units
+            Map: {world.map.width || 100} x {world.map.height || 100} units
           </div>
           <div className="text-text-secondary">
-            Locations: {world.map.locations.filter(l => l.discoveredByPlayer).length} / {world.map.locations.length}
+            Locations: {world.map.locations?.filter(l => l.discoveredByPlayer).length || 0} / {world.map.locations?.length || 0}
           </div>
         </Panel>
       </ReactFlow>

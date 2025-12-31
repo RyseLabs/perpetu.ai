@@ -36,10 +36,37 @@ export class WorldBuilderService {
     console.log('World data generated:', {
       worldName: worldData.world.name,
       characterCount: worldData.characters.length,
+      hasMap: !!worldData.world.map,
     });
     
     // Create world in file storage
     const now = Date.now();
+    
+    // Ensure map structure exists with defaults
+    if (!worldData.world.map) {
+      console.warn('World data missing map, creating default');
+      worldData.world.map = {
+        id: `map-${now}`,
+        name: worldData.world.name,
+        description: worldData.world.description,
+        width: 100,
+        height: 100,
+        locations: [],
+        createdAt: now,
+      };
+    }
+    
+    // Ensure map has required fields
+    if (!worldData.world.map.id) {
+      worldData.world.map.id = `map-${now}`;
+    }
+    if (!worldData.world.map.createdAt) {
+      worldData.world.map.createdAt = now;
+    }
+    if (!worldData.world.map.locations) {
+      worldData.world.map.locations = [];
+    }
+    
     const world: World = {
       ...worldData.world,
       id: `world-${Date.now()}`,
