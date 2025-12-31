@@ -41,7 +41,7 @@ export const InfoPanel: React.FC = () => {
     });
     
     return (
-      <div className="h-full bg-panel-bg border-l border-panel-border p-4 overflow-y-auto">
+      <div className="h-full bg-panel-bg p-4 overflow-y-auto">
         <h2 className="text-xl font-bold mb-4 text-accent">Location Info</h2>
         
         <div className="space-y-4">
@@ -116,7 +116,7 @@ export const InfoPanel: React.FC = () => {
   // Show character info if selected
   if (!selectedCharacter) {
     return (
-      <div className="h-full bg-panel-bg border-l border-panel-border p-4">
+      <div className="h-full bg-panel-bg p-4">
         <h2 className="text-xl font-bold mb-4 text-accent">Info Panel</h2>
         <p className="text-text-secondary text-sm">
           Select a character or location on the map to view information
@@ -128,7 +128,7 @@ export const InfoPanel: React.FC = () => {
   // Check if character has position data
   if (!selectedCharacter.position) {
     return (
-      <div className="h-full bg-panel-bg border-l border-panel-border p-4">
+      <div className="h-full bg-panel-bg p-4">
         <h2 className="text-xl font-bold mb-4 text-accent">Character Info</h2>
         <p className="text-text-secondary text-sm">
           Character data incomplete. Position information missing.
@@ -140,7 +140,7 @@ export const InfoPanel: React.FC = () => {
   const { discoveredByPlayer } = selectedCharacter;
   
   return (
-    <div className="h-full bg-panel-bg border-l border-panel-border p-4 overflow-y-auto">
+    <div className="h-full bg-panel-bg p-4 overflow-y-auto">
       <h2 className="text-xl font-bold mb-4 text-accent">Character Info</h2>
       
       <div className="space-y-4">

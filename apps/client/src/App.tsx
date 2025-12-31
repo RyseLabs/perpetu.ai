@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { PartyPanel } from './components/PartyPanel';
+import { SidebarPanel } from './components/SidebarPanel';
 import { MapView } from './components/MapView';
 import { ChatPanel } from './components/ChatPanel';
 import { InfoPanel } from './components/InfoPanel';
@@ -41,11 +41,21 @@ function App() {
       
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - Party */}
-        <div className="w-64 flex-shrink-0">
-          <ErrorBoundary>
-            <PartyPanel />
-          </ErrorBoundary>
+        {/* Left Panel - Sidebar with tabs and info */}
+        <div className="w-80 flex-shrink-0 flex flex-col overflow-hidden">
+          {/* Top Half - Tabs (Party/NPCs/Locations) */}
+          <div className="flex-1 overflow-hidden">
+            <ErrorBoundary>
+              <SidebarPanel />
+            </ErrorBoundary>
+          </div>
+          
+          {/* Bottom Half - Info Panel */}
+          <div className="flex-1 overflow-hidden border-t-2 border-panel-border">
+            <ErrorBoundary>
+              <InfoPanel />
+            </ErrorBoundary>
+          </div>
         </div>
         
         {/* Center Panel - Map & Chat */}
@@ -63,13 +73,6 @@ function App() {
               <ChatPanel />
             </ErrorBoundary>
           </div>
-        </div>
-        
-        {/* Right Panel - Character Info */}
-        <div className="w-80 flex-shrink-0">
-          <ErrorBoundary>
-            <InfoPanel />
-          </ErrorBoundary>
         </div>
       </div>
     </div>
