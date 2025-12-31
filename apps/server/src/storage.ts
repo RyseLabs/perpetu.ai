@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { World, Character, WorldEvent } from '@perpetu-ai/models';
+import { World, Character, WorldEvent, ChatMessage } from '@perpetu-ai/models';
 
 /**
  * Type guard to check if error is a Node.js error with code
@@ -33,6 +33,7 @@ export class FileStorage {
       await fs.mkdir(path.join(this.dataDir, 'worlds'), { recursive: true });
       await fs.mkdir(path.join(this.dataDir, 'characters'), { recursive: true });
       await fs.mkdir(path.join(this.dataDir, 'events'), { recursive: true });
+      await fs.mkdir(path.join(this.dataDir, 'chat'), { recursive: true });
     } catch (error) {
       console.error('Failed to initialize storage:', error);
       throw error;
@@ -213,6 +214,45 @@ export class FileStorage {
       await fs.rm(eventsDir, { recursive: true, force: true });
     } catch (error) {
       // Ignore if directory doesn't exist
+    }
+  }
+  
+  /**
+   * Save chat message to world's chat history
+   */
+  async saveChatMessage(worldId: string, message: ChatMessage): Promise<void> {
+    const chatFile = path.join(this.dataDir, 'chat', `${worldId}.json`);
+    await fs.mkdir(path.join(this.dataDir, 'chat'), { recursive: true });
+    
+    // Load existing messages
+    let messages: ChatMessage[] = [];
+    try {
+      const data = await fs.readFile(chatFile, 'utf-8');
+      messages = JSON.parse(data);
+    } catch (error) {
+      // File doesn't exist yet, start with empty array
+    }
+    
+    // Append new message
+    messages.push(message);
+    
+    // Save updated history
+    await fs.writeFile(chatFile, JSON.stringify(messages, null, 2), 'utf-8');
+  }
+  
+  /**
+   * Get all chat messages for a world
+   */
+  async getWorldChat(worldId: string): Promise<ChatMessage[]> {
+    try {
+      const chatFile = path.join(this.dataDir, 'chat', `${worldId}.json`);
+      const data = await fs.readFile(chatFile, 'utf-8');
+      return JSON.parse(data) as ChatMessage[];
+    } catch (error) {
+      if (isNodeError(error) && error.code === 'ENOENT') {
+        return []; // No chat history yet
+      }
+      throw error;
     }
   }
 }

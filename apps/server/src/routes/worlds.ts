@@ -1,5 +1,6 @@
 import { FastifyPluginAsync } from 'fastify';
 import { WorldBuilderService } from '../services/world-builder.js';
+import { fileStorage } from '../storage.js';
 
 const worldBuilderService = new WorldBuilderService();
 
@@ -192,6 +193,31 @@ export const worldRoutes: FastifyPluginAsync = async (fastify) => {
       console.error('Add location error:', error);
       return reply.code(500).send({
         error: 'Failed to add location',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+  
+  /**
+   * GET /api/worlds/:worldId/chat
+   * Get chat history for a world
+   */
+  fastify.get<{
+    Params: { worldId: string };
+  }>('/:worldId/chat', async (request, reply) => {
+    try {
+      const { worldId } = request.params;
+      
+      const messages = await fileStorage.getWorldChat(worldId);
+      
+      return reply.send({
+        success: true,
+        messages,
+      });
+    } catch (error) {
+      console.error('Get chat history error:', error);
+      return reply.code(500).send({
+        error: 'Failed to fetch chat history',
         message: error instanceof Error ? error.message : 'Unknown error',
       });
     }

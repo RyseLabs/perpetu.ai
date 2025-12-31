@@ -112,6 +112,14 @@ export class GameMasterService {
   ): Promise<{ narrative: string; updatedCharacters: Character[] }> {
     console.log('Processing player message...');
     
+    // Save player message to chat history
+    await fileStorage.saveChatMessage(worldId, {
+      id: `msg-${Date.now()}-player-${Math.random().toString(36).substr(2, 9)}`,
+      sender: 'player',
+      content: playerMessage,
+      timestamp: Date.now(),
+    });
+    
     const world = await fileStorage.getWorld(worldId);
     if (!world) {
       throw new Error('World not found');
@@ -134,6 +142,14 @@ export class GameMasterService {
       response,
       characters
     );
+    
+    // Save GM response to chat history
+    await fileStorage.saveChatMessage(worldId, {
+      id: `msg-${Date.now()}-gm-${Math.random().toString(36).substr(2, 9)}`,
+      sender: 'gm',
+      content: narrative,
+      timestamp: Date.now(),
+    });
     
     return { narrative, updatedCharacters };
   }

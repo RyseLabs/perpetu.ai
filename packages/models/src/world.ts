@@ -63,3 +63,16 @@ export const WorldEvent = z.object({
 });
 
 export type WorldEvent = z.infer<typeof WorldEvent>;
+
+/**
+ * Chat message in a world
+ */
+export const ChatMessage = z.object({
+  id: z.string(),
+  sender: z.enum(['player', 'gm', 'system']),
+  content: z.string(),
+  timestamp: z.number(),
+  metadata: z.record(z.any()).optional(),
+});
+
+export type ChatMessage = z.infer<typeof ChatMessage>;

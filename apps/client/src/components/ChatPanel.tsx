@@ -27,12 +27,33 @@ export const ChatPanel: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
   
-  // Check if player character exists when world is loaded
+  // Check if player character exists when world is loaded and load chat history
   useEffect(() => {
     if (world) {
       checkPlayerCharacter();
+      loadChatHistory();
     }
   }, [world]);
+  
+  const loadChatHistory = async () => {
+    if (!world?.id) return;
+    
+    try {
+      const response = await fetch(`/api/worlds/${world.id}/chat`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.messages && Array.isArray(data.messages)) {
+          // Clear existing messages and load from storage
+          clearChatMessages();
+          data.messages.forEach((msg: any) => {
+            addChatMessage(msg.sender, msg.content);
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load chat history:', error);
+    }
+  };
   
   const checkPlayerCharacter = async () => {
     if (!world) return;
