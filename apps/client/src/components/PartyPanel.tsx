@@ -28,16 +28,32 @@ export const PartyPanel: React.FC = () => {
               <button
                 key={character.id}
                 onClick={() => setSelectedCharacter(character)}
-                className={`w-full text-left p-3 rounded-lg transition-colors ${
+                className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 ${
                   selectedCharacter?.id === character.id
                     ? 'bg-accent text-white'
                     : 'bg-panel-border hover:bg-opacity-50'
                 }`}
               >
-                <div className="font-semibold">{name}</div>
-                <div className="text-sm opacity-75">{tier}</div>
-                <div className="text-xs mt-1">
-                  HP: {currentHp}/{maxHp}
+                {/* Avatar */}
+                {character.avatarUrl ? (
+                  <img 
+                    src={character.avatarUrl} 
+                    alt={name}
+                    className="w-12 h-12 rounded-full border-2 border-accent object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-panel-bg flex items-center justify-center border-2 border-accent flex-shrink-0">
+                    <span className="text-lg font-bold">{name[0]?.toUpperCase()}</span>
+                  </div>
+                )}
+                
+                {/* Character info */}
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold truncate">{name}</div>
+                  <div className="text-sm opacity-75 truncate">{tier}</div>
+                  <div className="text-xs mt-1">
+                    HP: {currentHp}/{maxHp}
+                  </div>
                 </div>
               </button>
             );

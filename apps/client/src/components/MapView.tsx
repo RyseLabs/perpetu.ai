@@ -32,24 +32,50 @@ const CharacterNode: React.FC<{ data: any }> = ({ data }) => {
   const isDiscovered = character?.discoveredByPlayer || false;
   const isPlayer = character?.isPlayerCharacter || false;
   const isInParty = character?.isInPlayerParty || false;
+  const avatarUrl = character?.avatarUrl;
   
   return (
-    <div
-      onClick={() => setSelectedCharacter(character)}
-      className="cursor-pointer bg-panel-bg border-2 border-accent rounded-lg p-2 min-w-[100px] hover:bg-panel-border transition-colors shadow-lg"
-      style={{
-        borderColor: isInParty ? '#6366f1' : isPlayer ? '#10b981' : '#2a2a2a',
-      }}
-    >
-      <div className="text-xs font-bold truncate">
-        {isDiscovered ? name : 'Unknown'}
-      </div>
-      <div className="text-xs text-text-secondary">
-        {tier}
-      </div>
-      {isPlayer && (
-        <div className="text-xs text-green-400 font-bold">★ You</div>
+    <div className="relative">
+      {/* Avatar overlay - positioned above the main node */}
+      {avatarUrl && (
+        <div
+          style={{
+            position: 'absolute',
+            top: -40,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 10,
+          }}
+        >
+          <img 
+            src={avatarUrl}
+            alt={name}
+            className="w-10 h-10 rounded-full border-2 object-cover shadow-md"
+            style={{
+              borderColor: isInParty ? '#6366f1' : isPlayer ? '#10b981' : '#fbbf24',
+            }}
+          />
+        </div>
       )}
+      
+      {/* Character node */}
+      <div
+        onClick={() => setSelectedCharacter(character)}
+        className="cursor-pointer bg-panel-bg border-2 border-accent rounded-lg p-2 min-w-[100px] hover:bg-panel-border transition-colors shadow-lg"
+        style={{
+          borderColor: isInParty ? '#6366f1' : isPlayer ? '#10b981' : '#2a2a2a',
+        }}
+      >
+        <div className="text-xs font-bold truncate">
+          {isDiscovered ? name : 'Unknown'}
+        </div>
+        <div className="text-xs text-text-secondary">
+          {tier}
+        </div>
+        {isPlayer && (
+          <div className="text-xs text-green-400 font-bold">★ You</div>
+        )}
+      </div>
     </div>
   );
 };

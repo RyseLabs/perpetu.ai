@@ -105,9 +105,23 @@ export class WorldBuilderService {
     const characters: Character[] = [];
     for (const charData of worldData.characters) {
       const characterId = `char-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Generate avatar for character
+      let avatarUrl: string | undefined;
+      try {
+        console.log(`Generating avatar for ${charData.name}...`);
+        const avatarPrompt = `Fantasy RPG character portrait: ${charData.name}. ${charData.description || 'A mysterious cultivator'}. Fantasy art style, detailed face portrait, ${charData.advancementTier} tier cultivator, heroic fantasy aesthetic, dramatic lighting.`;
+        avatarUrl = await this.aiClient.generateImage(avatarPrompt, '256x256');
+        console.log(`Avatar generated for ${charData.name}`);
+      } catch (error) {
+        console.warn(`Failed to generate avatar for ${charData.name}:`, error);
+        // Continue without avatar
+      }
+      
       const character: Character = {
         ...charData,
         id: characterId,
+        avatarUrl,
         discoveredByPlayer: true, // Mark initial NPCs as discovered
         createdAt: now,
         lastUpdated: now,

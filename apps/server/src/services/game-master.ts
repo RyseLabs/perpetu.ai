@@ -49,6 +49,18 @@ export class GameMasterService {
     
     console.log('Player character generated:', characterData.name);
     
+    // Generate avatar for player character
+    let avatarUrl: string | undefined;
+    try {
+      console.log(`Generating avatar for player character ${characterData.name}...`);
+      const avatarPrompt = `Fantasy RPG player character portrait: ${characterData.name}. ${characterData.description || 'A heroic adventurer'}. Heroic fantasy art style, detailed face portrait, ${characterData.advancementTier} tier cultivator, protagonist, dramatic lighting, high quality.`;
+      avatarUrl = await this.aiClient.generateImage(avatarPrompt, '256x256');
+      console.log(`Avatar generated for player character`);
+    } catch (error) {
+      console.warn(`Failed to generate avatar for player character:`, error);
+      // Continue without avatar
+    }
+    
     // Create character in file storage
     const now = Date.now();
     const characterId = generateUniqueCharacterId();
@@ -75,6 +87,7 @@ export class GameMasterService {
     const character: Character = {
       ...characterData,
       id: characterId,
+      avatarUrl,
       createdAt: now,
       lastUpdated: now,
       isPlayerCharacter: true,

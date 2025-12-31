@@ -126,6 +126,17 @@ export const InfoPanel: React.FC = () => {
       <h2 className="text-xl font-bold mb-4 text-accent">Character Info</h2>
       
       <div className="space-y-4">
+        {/* Avatar */}
+        {selectedCharacter.avatarUrl && discoveredByPlayer && (
+          <div className="flex justify-center mb-4">
+            <img 
+              src={selectedCharacter.avatarUrl} 
+              alt={selectedCharacter.name}
+              className="w-32 h-32 rounded-lg border-4 border-accent object-cover shadow-lg"
+            />
+          </div>
+        )}
+        
         {/* Basic Info */}
         <div>
           <h3 className="font-semibold text-lg mb-2">

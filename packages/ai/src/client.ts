@@ -124,14 +124,14 @@ export class AIClient {
    */
   async generateImage(
     prompt: string,
-    size: '1024x1024' | '1792x1024' | '1024x1792' = '1792x1024'
+    size: '256x256' | '1024x1024' | '1792x1024' | '1024x1792' = '1792x1024'
   ): Promise<string> {
     try {
       const response = await this.client.images.generate({
         model: 'dall-e-3',
         prompt,
         n: 1,
-        size,
+        size: size === '256x256' ? '1024x1024' : size, // DALL-E 3 doesn't support 256x256, use 1024x1024 instead
         quality: 'standard',
         response_format: 'url',
       });

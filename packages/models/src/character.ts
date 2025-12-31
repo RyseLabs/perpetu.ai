@@ -110,6 +110,9 @@ export const Character = z.object({
   isInPlayerParty: z.boolean().default(false),
   discoveredByPlayer: z.boolean().default(false),
   
+  // Visual
+  avatarUrl: z.string().optional(), // DALL-E generated character portrait
+  
   // Teacher/mentor for technique learning
   teacherId: z.string().optional(),
   
