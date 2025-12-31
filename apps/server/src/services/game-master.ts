@@ -109,7 +109,7 @@ export class GameMasterService {
     worldId: string,
     playerMessage: string,
     chatHistory: Array<{ sender: string; content: string }>
-  ): Promise<string> {
+  ): Promise<{ narrative: string; updatedCharacters: Character[] }> {
     console.log('Processing player message...');
     
     const world = await fileStorage.getWorld(worldId);
@@ -128,7 +128,104 @@ export class GameMasterService {
     
     console.log('GM response generated');
     
-    return response;
+    // Parse and apply state updates
+    const { narrative, updatedCharacters } = await this.parseAndApplyStateUpdates(
+      worldId,
+      response,
+      characters
+    );
+    
+    return { narrative, updatedCharacters };
+  }
+  
+  /**
+   * Parse state updates from GM response and apply them
+   */
+  private async parseAndApplyStateUpdates(
+    worldId: string,
+    response: string,
+    characters: Character[]
+  ): Promise<{ narrative: string; updatedCharacters: Character[] }> {
+    // Extract JSON code blocks from response
+    const jsonBlockRegex = /```json\s*([\s\S]*?)```/g;
+    const matches = [...response.matchAll(jsonBlockRegex)];
+    
+    // Remove JSON blocks from narrative to show clean text to user
+    let narrative = response;
+    matches.forEach(match => {
+      narrative = narrative.replace(match[0], '').trim();
+    });
+    
+    // Also remove "**State Update:**" markers if present
+    narrative = narrative.replace(/\*\*State Update:\*\*/gi, '').trim();
+    
+    const updatedCharacters: Character[] = [];
+    
+    // Parse and apply state updates from last JSON block
+    if (matches.length > 0) {
+      try {
+        const stateUpdates = JSON.parse(matches[matches.length - 1][1]);
+        console.log('State updates parsed:', JSON.stringify(stateUpdates, null, 2));
+        
+        if (stateUpdates.characterUpdates && Array.isArray(stateUpdates.characterUpdates)) {
+          for (const update of stateUpdates.characterUpdates) {
+            const character = characters.find(c => c.id === update.characterId);
+            if (!character) {
+              console.warn(`Character not found: ${update.characterId}`);
+              continue;
+            }
+            
+            // Apply updates to character
+            let hasChanges = false;
+            
+            if (update.updates.position) {
+              character.position = update.updates.position;
+              hasChanges = true;
+              console.log(`Updated position for ${character.name}:`, character.position);
+            }
+            
+            if (update.updates.stats) {
+              character.stats = { ...character.stats, ...update.updates.stats };
+              hasChanges = true;
+              console.log(`Updated stats for ${character.name}`);
+            }
+            
+            if (update.updates.madraCore) {
+              character.madraCore = { ...character.madraCore, ...update.updates.madraCore };
+              hasChanges = true;
+              console.log(`Updated madra for ${character.name}`);
+            }
+            
+            if (update.updates.inventory) {
+              character.inventory = update.updates.inventory;
+              hasChanges = true;
+              console.log(`Updated inventory for ${character.name}`);
+            }
+            
+            if (update.updates.activity) {
+              character.activity = update.updates.activity;
+              hasChanges = true;
+            }
+            
+            if (update.updates.currentGoal) {
+              character.currentGoal = update.updates.currentGoal;
+              hasChanges = true;
+            }
+            
+            if (hasChanges) {
+              character.lastUpdated = Date.now();
+              await fileStorage.saveCharacter(worldId, character);
+              updatedCharacters.push(character);
+              console.log(`Saved updates for ${character.name}`);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to parse or apply state updates:', error);
+      }
+    }
+    
+    return { narrative, updatedCharacters };
   }
   
   /**

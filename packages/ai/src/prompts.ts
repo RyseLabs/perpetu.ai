@@ -370,7 +370,7 @@ Current situation:
 - HP: ${playerCharacter ? `${playerCharacter.stats?.currentHp ?? 0}/${playerCharacter.stats?.maxHp ?? 0}` : 'N/A'}
 - Madra: ${playerCharacter ? `${playerCharacter.madraCore?.currentMadra ?? 0}/${playerCharacter.madraCore?.maxMadra ?? 0}` : 'N/A'}
 - Equipment: ${equipment}
-- Nearby characters: ${nearbyCharacters.map(c => `${c.name} (${c.advancementTier})`).join(', ') || 'None'}
+- Nearby characters: ${nearbyCharacters.map(c => `${c.name} (${c.advancementTier}) at (${c.position?.x?.toFixed(1) ?? '?'}, ${c.position?.y?.toFixed(1) ?? '?'})`).join(', ') || 'None'}
 
 Recent conversation:
 ${chatHistory.slice(-3).map(msg => `${msg.sender}: ${msg.content}`).join('\n')}
@@ -384,13 +384,52 @@ As Game Master:
 4. Update character states as needed
 5. Keep the world feeling alive and reactive
 
-IMPORTANT: If the player's action involves:
-- Movement: Describe the journey and mention position changes
-- Combat/Looting: Update inventory with found items, equipment changes
-- Using items/techniques: Update madra, HP, or inventory accordingly
-- Discovering locations: Note new areas found
+CRITICAL RESPONSE FORMAT:
+You MUST respond in TWO parts:
+1. First: Engaging narrative text for the player
+2. Second: A state update JSON block (if anything changes)
 
-While you should primarily output narrative text, include brief state update notes when character position, HP, madra, or inventory changes so the game state can be synchronized.
+When the player's action causes state changes (movement, combat, looting, using items), include a state update block:
+
+\`\`\`json
+{
+  "characterUpdates": [
+    {
+      "characterId": "${playerCharacter?.id ?? 'player-id'}",
+      "updates": {
+        "position": { "x": 45.5, "y": 67.2 },
+        "stats": { "currentHp": 25, "currentMadra": 80 },
+        "inventory": [...full updated inventory array...],
+        "activity": "exploring",
+        "currentGoal": "Updated goal"
+      }
+    }
+  ]
+}
+\`\`\`
+
+IMPORTANT RULES FOR STATE UPDATES:
+- ONLY include the \`\`\`json block if something actually changes
+- For position updates: provide the new x, y coordinates
+- For inventory: provide the COMPLETE updated inventory array (not just new items)
+- For stats: only include stats that changed (currentHp, currentMadra, etc.)
+- For movement: calculate realistic new position based on distance/direction described
+- Always use the actual character IDs: player is "${playerCharacter?.id ?? 'unknown'}"
+
+Example response:
+"As you venture north toward the mountains, the landscape becomes more rugged. You notice ancient ruins in the distance...
+
+\`\`\`json
+{
+  "characterUpdates": [{
+    "characterId": "${playerCharacter?.id ?? 'player-id'}",
+    "updates": {
+      "position": { "x": 48.0, "y": 72.5 },
+      "activity": "traveling"
+    }
+  }]
+}
+\`\`\`"
 
 Respond naturally and engagingly, advancing the story.`;
 }

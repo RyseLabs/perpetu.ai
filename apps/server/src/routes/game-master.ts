@@ -66,7 +66,7 @@ export const gameMasterRoutes: FastifyPluginAsync = async (fastify) => {
         });
       }
       
-      const response = await gameMasterService.handlePlayerMessage(
+      const { narrative, updatedCharacters } = await gameMasterService.handlePlayerMessage(
         worldId,
         message,
         chatHistory
@@ -74,7 +74,9 @@ export const gameMasterRoutes: FastifyPluginAsync = async (fastify) => {
       
       return reply.send({
         success: true,
-        response,
+        response: narrative,
+        updatedCharacters,
+        hasStateChanges: updatedCharacters.length > 0,
       });
     } catch (error) {
       console.error('Game master chat error:', error);

@@ -189,6 +189,24 @@ export const ChatPanel: React.FC = () => {
       
       const data = await response.json();
       
+      // Update characters if state changes occurred
+      if (data.updatedCharacters && Array.isArray(data.updatedCharacters)) {
+        console.log(`Received ${data.updatedCharacters.length} updated character(s) from GM`);
+        
+        // Update each character in the store
+        data.updatedCharacters.forEach((updatedChar: any) => {
+          // Find and replace the character in the store
+          const currentChars = characters.slice();
+          const index = currentChars.findIndex(c => c.id === updatedChar.id);
+          if (index !== -1) {
+            currentChars[index] = updatedChar;
+            console.log(`Updated character: ${updatedChar.name}`);
+          }
+          // Replace all characters to trigger re-render
+          setCharacters(currentChars);
+        });
+      }
+      
       setIsProcessing(false);
       addChatMessage('gm', data.response);
       
