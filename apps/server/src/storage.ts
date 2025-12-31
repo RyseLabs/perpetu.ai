@@ -3,6 +3,17 @@ import path from 'path';
 import { World, Character, WorldEvent } from '@perpetu-ai/models';
 
 /**
+ * Type guard to check if error is a Node.js error with code
+ */
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error
+  );
+}
+
+/**
  * Simple file-based storage for game state
  * Stores data in JSON files in the ./data directory
  */
@@ -45,7 +56,7 @@ export class FileStorage {
       const data = await fs.readFile(filePath, 'utf-8');
       return JSON.parse(data) as World;
     } catch (error) {
-      if ((error as any).code === 'ENOENT') {
+      if (isNodeError(error) && error.code === 'ENOENT') {
         return null;
       }
       throw error;
@@ -93,7 +104,7 @@ export class FileStorage {
       const data = await fs.readFile(filePath, 'utf-8');
       return JSON.parse(data) as Character;
     } catch (error) {
-      if ((error as any).code === 'ENOENT') {
+      if (isNodeError(error) && error.code === 'ENOENT') {
         return null;
       }
       throw error;
@@ -118,7 +129,7 @@ export class FileStorage {
       
       return characters;
     } catch (error) {
-      if ((error as any).code === 'ENOENT') {
+      if (isNodeError(error) && error.code === 'ENOENT') {
         return [];
       }
       throw error;
@@ -171,7 +182,7 @@ export class FileStorage {
       
       return events.sort((a, b) => a.turn - b.turn);
     } catch (error) {
-      if ((error as any).code === 'ENOENT') {
+      if (isNodeError(error) && error.code === 'ENOENT') {
         return [];
       }
       throw error;
