@@ -29,7 +29,7 @@ export const ChatPanel: React.FC = () => {
   
   // Check if player character exists when world is loaded
   useEffect(() => {
-    if (world && !needsPlayerCharacter) {
+    if (world) {
       checkPlayerCharacter();
     }
   }, [world]);
