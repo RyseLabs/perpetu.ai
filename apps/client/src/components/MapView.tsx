@@ -129,19 +129,23 @@ export const MapView: React.FC = () => {
   }, [world, characters]);
   
   // Convert characters and locations to React Flow nodes
-  const characterNodes: Node[] = characters.map((character) => ({
-    id: `char-${character.id}`,
-    type: 'character',
-    position: { x: character.position.x * 100, y: character.position.y * 100 },
-    data: { character },
-  }));
+  const characterNodes: Node[] = characters
+    .filter((character) => character.position && typeof character.position.x === 'number' && typeof character.position.y === 'number')
+    .map((character) => ({
+      id: `char-${character.id}`,
+      type: 'character',
+      position: { x: character.position.x * 100, y: character.position.y * 100 },
+      data: { character },
+    }));
   
-  const locationNodes: Node[] = world?.map?.locations?.map((location) => ({
-    id: `loc-${location.id}`,
-    type: 'location',
-    position: { x: location.position.x * 100, y: location.position.y * 100 },
-    data: { location },
-  })) || [];
+  const locationNodes: Node[] = world?.map?.locations
+    ?.filter((location) => location.position && typeof location.position.x === 'number' && typeof location.position.y === 'number')
+    ?.map((location) => ({
+      id: `loc-${location.id}`,
+      type: 'location',
+      position: { x: location.position.x * 100, y: location.position.y * 100 },
+      data: { location },
+    })) || [];
   
   const allNodes = [...characterNodes, ...locationNodes];
   
@@ -150,15 +154,30 @@ export const MapView: React.FC = () => {
   
   // Update nodes when characters or locations change
   React.useEffect(() => {
-    const newCharacterNodes: Node[] = characters.map((character) => ({
-      id: `char-${character.id}`,
-      type: 'character',
-      position: { x: character.position.x * 100, y: character.position.y * 100 },
-      data: { character },
-    }));
+    const newCharacterNodes: Node[] = characters
+      .filter((character) => {
+        if (!character.position || typeof character.position.x !== 'number' || typeof character.position.y !== 'number') {
+          console.warn('Character missing valid position:', character.name, character.position);
+          return false;
+        }
+        return true;
+      })
+      .map((character) => ({
+        id: `char-${character.id}`,
+        type: 'character',
+        position: { x: character.position.x * 100, y: character.position.y * 100 },
+        data: { character },
+      }));
     
     const newLocationNodes: Node[] = world?.map?.locations
-      ?.filter(loc => loc.discoveredByPlayer) // Only show discovered locations
+      ?.filter(loc => {
+        if (!loc.discoveredByPlayer) return false; // Only show discovered locations
+        if (!loc.position || typeof loc.position.x !== 'number' || typeof loc.position.y !== 'number') {
+          console.warn('Location missing valid position:', loc.name, loc.position);
+          return false;
+        }
+        return true;
+      })
       .map((location) => ({
         id: `loc-${location.id}`,
         type: 'location',

@@ -1,5 +1,5 @@
 import { AIClient, GAME_MASTER_SYSTEM_PROMPT, PLAYER_CHARACTER_CREATION_PROMPT, generatePlayerCharacterPrompt, generateGameMasterPrompt } from '@perpetu-ai/ai';
-import { World, Character } from '@perpetu-ai/models';
+import { Character } from '@perpetu-ai/models';
 import { fileStorage } from '../storage.js';
 import { config } from '../config.js';
 

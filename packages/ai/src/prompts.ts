@@ -301,7 +301,7 @@ export function generatePlayerCharacterPrompt(
   return `Create a player character for the world "${world.name}".
 
 World details:
-${JSON.stringify({ name: world.name, description: world.description, locations: world.locations }, null, 2)}
+${JSON.stringify({ name: world.name, description: world.description, locations: world.map?.locations || [] }, null, 2)}
 
 Player's character description:
 ${playerDescription}
