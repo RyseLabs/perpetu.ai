@@ -72,9 +72,21 @@ export const useGameStore = create<GameState>((set) => ({
   setCharacters: (characters) => set({ characters }),
   
   addCharacter: (character) =>
-    set((state) => ({
-      characters: [...state.characters, character],
-    })),
+    set((state) => {
+      // Check if character already exists to prevent duplicates
+      const exists = state.characters.some(c => c.id === character.id);
+      if (exists) {
+        console.warn(`Character ${character.id} already exists, updating instead`);
+        return {
+          characters: state.characters.map(c => 
+            c.id === character.id ? character : c
+          ),
+        };
+      }
+      return {
+        characters: [...state.characters, character],
+      };
+    }),
   
   updateCharacter: (characterId, updates) =>
     set((state) => ({

@@ -238,111 +238,141 @@ export const ChatPanel: React.FC = () => {
     }
   };
   
+  // Split messages into GM responses and player messages
+  const gmMessages = chatMessages.filter(m => m.sender === 'gm' || m.sender === 'system');
+  const playerMessages = chatMessages.filter(m => m.sender === 'player');
+  
   return (
-    <div className="h-full bg-panel-bg border-t border-panel-border flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 p-3 border-b border-panel-border">
-        <h3 className="font-semibold text-accent">
-          {!world ? 'World Builder' : needsPlayerCharacter ? 'Character Creation' : 'Game Master'}
-        </h3>
-      </div>
-      
-      {/* Messages - Scrollable container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
-        {chatMessages.length === 0 ? (
-          <div className="text-text-secondary text-sm space-y-2">
-            {!world ? (
-              <>
-                <p className="font-semibold text-accent">Welcome to Perpetu.AI!</p>
-                <p>Paste your world story in the text box below to begin.</p>
-                <p className="text-xs">Your story should include:</p>
-                <ul className="list-disc list-inside text-xs space-y-1 ml-2">
-                  <li>World description and geography</li>
-                  <li>Key locations</li>
-                  <li>Characters with their backgrounds</li>
-                  <li>Factions and conflicts</li>
-                </ul>
-              </>
-            ) : (
-              <p>The Game Master will narrate your journey here...</p>
-            )}
-          </div>
-        ) : (
-          chatMessages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${
-                message.sender === 'player' ? 'justify-end' : 'justify-start'
-              }`}
-            >
-              <div
-                className={`max-w-[80%] p-3 rounded-lg break-words ${
-                  message.sender === 'player'
-                    ? 'bg-accent text-white'
-                    : message.sender === 'system'
+    <div className="h-full bg-panel-bg border-t border-panel-border flex overflow-hidden">
+      {/* Left Half - GM Responses */}
+      <div className="flex-1 flex flex-col overflow-hidden border-r border-panel-border">
+        {/* Header */}
+        <div className="flex-shrink-0 p-3 border-b border-panel-border">
+          <h3 className="font-semibold text-accent">
+            {!world ? 'World Builder' : needsPlayerCharacter ? 'Character Creation' : 'Game Master'}
+          </h3>
+        </div>
+        
+        {/* GM Messages - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+          {gmMessages.length === 0 ? (
+            <div className="text-text-secondary text-sm space-y-2">
+              {!world ? (
+                <>
+                  <p className="font-semibold text-accent">Welcome to Perpetu.AI!</p>
+                  <p>Paste your world story in the right panel to begin.</p>
+                  <p className="text-xs">Your story should include:</p>
+                  <ul className="list-disc list-inside text-xs space-y-1 ml-2">
+                    <li>World description and geography</li>
+                    <li>Key locations</li>
+                    <li>Characters with their backgrounds</li>
+                    <li>Factions and conflicts</li>
+                  </ul>
+                </>
+              ) : (
+                <p>The Game Master will narrate your journey here...</p>
+              )}
+            </div>
+          ) : (
+            gmMessages.map((message) => (
+              <div key={message.id} className="flex justify-start">
+                <div className={`max-w-[90%] p-3 rounded-lg break-words ${
+                  message.sender === 'system'
                     ? 'bg-yellow-900/30 text-yellow-200 border border-yellow-700/50'
                     : 'bg-panel-border text-text-primary'
-                }`}
-              >
-                <div className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">{message.content}</div>
-                <div className="text-xs opacity-60 mt-1">
-                  {new Date(message.timestamp).toLocaleTimeString()}
+                }`}>
+                  <div className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">
+                    {message.content}
+                  </div>
+                  <div className="text-xs opacity-60 mt-1">
+                    {new Date(message.timestamp).toLocaleTimeString()}
+                  </div>
                 </div>
               </div>
+            ))
+          )}
+          {isWorldBuilding && (
+            <div className="flex justify-center">
+              <div className="bg-panel-border p-4 rounded-lg flex items-center gap-3">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent"></div>
+                <span className="text-sm text-text-secondary">Building your world...</span>
+              </div>
             </div>
-          ))
-        )}
-        {isWorldBuilding && (
-          <div className="flex justify-center">
-            <div className="bg-panel-border p-4 rounded-lg flex items-center gap-3">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent"></div>
-              <span className="text-sm text-text-secondary">Building your world...</span>
+          )}
+          {isProcessing && (
+            <div className="flex justify-center">
+              <div className="bg-panel-border p-4 rounded-lg flex items-center gap-3">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent"></div>
+                <span className="text-sm text-text-secondary">Game Master is thinking...</span>
+              </div>
             </div>
-          </div>
-        )}
-        {isProcessing && (
-          <div className="flex justify-center">
-            <div className="bg-panel-border p-4 rounded-lg flex items-center gap-3">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent"></div>
-              <span className="text-sm text-text-secondary">Game Master is thinking...</span>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
+          )}
+        </div>
       </div>
       
-      {/* Input */}
-      <div className="flex-shrink-0 p-3 border-t border-panel-border">
-        <div className="flex flex-col gap-2">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              // Allow Shift+Enter for new line, Enter alone to send
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
+      {/* Right Half - Player Input & History */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex-shrink-0 p-3 border-b border-panel-border">
+          <h3 className="font-semibold text-accent">Your Actions</h3>
+        </div>
+        
+        {/* Player Messages - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+          {playerMessages.length === 0 ? (
+            <div className="text-text-secondary text-sm">
+              <p>Your messages will appear here...</p>
+            </div>
+          ) : (
+            playerMessages.map((message) => (
+              <div key={message.id} className="flex justify-end">
+                <div className="max-w-[90%] p-3 rounded-lg break-words bg-accent text-white">
+                  <div className="text-sm whitespace-pre-wrap break-words overflow-wrap-anywhere">
+                    {message.content}
+                  </div>
+                  <div className="text-xs opacity-75 mt-1">
+                    {new Date(message.timestamp).toLocaleTimeString()}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+        
+        {/* Input - Horizontal layout */}
+        <div className="flex-shrink-0 p-3 border-t border-panel-border">
+          <div className="flex gap-2">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                // Allow Shift+Enter for new line, Enter alone to send
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              placeholder={
+                !world 
+                  ? "Paste your world story here..." 
+                  : needsPlayerCharacter
+                  ? "Describe your character..."
+                  : "Type your action..."
               }
-            }}
-            placeholder={
-              !world 
-                ? "Paste your world story here and press Enter (or click Send)..." 
-                : needsPlayerCharacter
-                ? "Describe your character (name, tier, madra nature, background)..."
-                : "Type your action or question... (Shift+Enter for new line)"
-            }
-            disabled={isWorldBuilding || isProcessing}
-            className="w-full bg-panel-border text-text-primary px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-accent resize-none overflow-y-auto"
-            rows={!world ? 6 : needsPlayerCharacter ? 4 : 3}
-            style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}
-          />
-          <button
-            onClick={handleSend}
-            disabled={!input.trim() || isWorldBuilding || isProcessing}
-            className="px-4 py-2 bg-accent text-white rounded hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {!world ? 'Build World' : needsPlayerCharacter ? 'Create Character' : 'Send'}
-          </button>
+              disabled={isWorldBuilding || isProcessing}
+              className="flex-1 bg-panel-border text-text-primary px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-accent resize-none overflow-y-auto"
+              rows={2}
+              style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}
+            />
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || isWorldBuilding || isProcessing}
+              className="px-6 py-2 bg-accent text-white rounded hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+            >
+              {!world ? 'Build' : needsPlayerCharacter ? 'Create' : 'Send'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

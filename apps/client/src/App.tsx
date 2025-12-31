@@ -60,15 +60,15 @@ function App() {
         
         {/* Center Panel - Map & Chat */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Map (top 60%) */}
-          <div className="flex-[6] overflow-hidden">
+          {/* Map (top 50%) */}
+          <div className="flex-1 overflow-hidden">
             <ErrorBoundary>
               <MapView />
             </ErrorBoundary>
           </div>
           
-          {/* Chat (bottom 40%) */}
-          <div className="flex-[4] overflow-hidden">
+          {/* Chat (bottom 50%) */}
+          <div className="flex-1 overflow-hidden">
             <ErrorBoundary>
               <ChatPanel />
             </ErrorBoundary>
