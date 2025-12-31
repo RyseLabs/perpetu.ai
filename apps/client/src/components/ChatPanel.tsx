@@ -12,16 +12,89 @@ export const ChatPanel: React.FC = () => {
     world, 
     setWorld, 
     setCharacters,
+    addCharacter,
+    characters,
     isWorldBuilding,
     setWorldBuilding,
   } = useGameStore();
   const [input, setInput] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [needsPlayerCharacter, setNeedsPlayerCharacter] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
+  
+  // Check if player character exists when world is loaded
+  useEffect(() => {
+    if (world && !needsPlayerCharacter) {
+      checkPlayerCharacter();
+    }
+  }, [world]);
+  
+  const checkPlayerCharacter = async () => {
+    if (!world) return;
+    
+    try {
+      const response = await fetch(`/api/gm/player-character/${world.id}`);
+      if (response.status === 404) {
+        // No player character exists
+        setNeedsPlayerCharacter(true);
+        addChatMessage('system', '👤 First, let\'s create your character! Describe your character including:');
+        addChatMessage('system', '• Name\n• Advancement tier (Foundation to Monarch)\n• Madra nature (Pure, Fire, Water, etc.)\n• Background and starting point');
+      } else if (response.ok) {
+        const data = await response.json();
+        setNeedsPlayerCharacter(false);
+        // Ensure player character is in the characters list
+        const hasPlayer = characters.some(c => c.isPlayerCharacter);
+        if (!hasPlayer && data.character) {
+          addCharacter(data.character);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking player character:', error);
+    }
+  };
+  
+  const handlePlayerCharacterCreation = async (description: string) => {
+    try {
+      setIsProcessing(true);
+      addChatMessage('system', '✨ Creating your character... This may take a moment.');
+      
+      const response = await fetch('/api/gm/player-character', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          worldId: world?.id,
+          description 
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to create player character');
+      }
+      
+      const data = await response.json();
+      
+      // Add player character to the store
+      addCharacter(data.character);
+      
+      setNeedsPlayerCharacter(false);
+      setIsProcessing(false);
+      
+      addChatMessage('gm', `Welcome, ${data.character.name}! You are now in ${world?.name}.`);
+      addChatMessage('gm', `You stand at ${data.character.position.x}, ${data.character.position.y} on the map. What would you like to do?`);
+      
+    } catch (error) {
+      console.error('Player character creation error:', error);
+      setIsProcessing(false);
+      addChatMessage('system', '❌ Failed to create character. Please try again with a clear description.');
+    }
+  };
   
   const handleWorldBuilding = async (story: string) => {
     try {
@@ -78,14 +151,52 @@ export const ChatPanel: React.FC = () => {
       return;
     }
     
-    // Normal game interaction
+    // If we need player character, create it
+    if (needsPlayerCharacter) {
+      addChatMessage('player', input);
+      setInput('');
+      await handlePlayerCharacterCreation(input);
+      return;
+    }
+    
+    // Normal game interaction with Game Master
     addChatMessage('player', input);
+    const messageToSend = input;
     setInput('');
     
-    // TODO: Send message to backend via WebSocket for game master response
-    setTimeout(() => {
-      addChatMessage('gm', `[Game Master response to: "${input}"]`);
-    }, 1000);
+    try {
+      setIsProcessing(true);
+      
+      // Send message to Game Master
+      const response = await fetch('/api/gm/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          worldId: world.id,
+          message: messageToSend,
+          chatHistory: chatMessages.slice(-10).map(m => ({
+            sender: m.sender,
+            content: m.content
+          }))
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to get GM response');
+      }
+      
+      const data = await response.json();
+      
+      setIsProcessing(false);
+      addChatMessage('gm', data.response);
+      
+    } catch (error) {
+      console.error('Game Master error:', error);
+      setIsProcessing(false);
+      addChatMessage('system', '❌ Failed to get Game Master response. Please try again.');
+    }
   };
   
   return (
@@ -93,7 +204,7 @@ export const ChatPanel: React.FC = () => {
       {/* Header */}
       <div className="flex-shrink-0 p-3 border-b border-panel-border">
         <h3 className="font-semibold text-accent">
-          {!world ? 'World Builder' : 'Game Master'}
+          {!world ? 'World Builder' : needsPlayerCharacter ? 'Character Creation' : 'Game Master'}
         </h3>
       </div>
       
@@ -150,6 +261,14 @@ export const ChatPanel: React.FC = () => {
             </div>
           </div>
         )}
+        {isProcessing && (
+          <div className="flex justify-center">
+            <div className="bg-panel-border p-4 rounded-lg flex items-center gap-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent"></div>
+              <span className="text-sm text-text-secondary">Game Master is thinking...</span>
+            </div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
       
@@ -169,19 +288,21 @@ export const ChatPanel: React.FC = () => {
             placeholder={
               !world 
                 ? "Paste your world story here and press Enter (or click Send)..." 
+                : needsPlayerCharacter
+                ? "Describe your character (name, tier, madra nature, background)..."
                 : "Type your action or question... (Shift+Enter for new line)"
             }
-            disabled={isWorldBuilding}
+            disabled={isWorldBuilding || isProcessing}
             className="w-full bg-panel-border text-text-primary px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-accent resize-none overflow-y-auto"
-            rows={!world ? 6 : 3}
+            rows={!world ? 6 : needsPlayerCharacter ? 4 : 3}
             style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || isWorldBuilding}
+            disabled={!input.trim() || isWorldBuilding || isProcessing}
             className="px-4 py-2 bg-accent text-white rounded hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {!world ? 'Build World' : 'Send'}
+            {!world ? 'Build World' : needsPlayerCharacter ? 'Create Character' : 'Send'}
           </button>
         </div>
       </div>

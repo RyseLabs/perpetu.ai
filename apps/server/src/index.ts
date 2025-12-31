@@ -5,6 +5,7 @@ import multipart from '@fastify/multipart';
 import { config } from './config.js';
 import { worldRoutes } from './routes/worlds.js';
 import { websocketRoutes } from './routes/websocket.js';
+import { gameMasterRoutes } from './routes/game-master.js';
 import { fileStorage } from './storage.js';
 
 const fastify = Fastify({
@@ -45,6 +46,7 @@ async function registerRoutes() {
   
   // API routes
   fastify.register(worldRoutes, { prefix: '/api/worlds' });
+  fastify.register(gameMasterRoutes, { prefix: '/api/gm' });
   
   // WebSocket routes
   fastify.register(websocketRoutes, { prefix: '/ws' });

@@ -203,3 +203,95 @@ Output JSON with:
 - revealedInfo: string (what the player learns)
 - newRelationship: string (how they view each other now)`;
 }
+
+/**
+ * System prompt for player character creation
+ */
+export const PLAYER_CHARACTER_CREATION_PROMPT = `You are assisting in creating a player character for a tabletop RPG game.
+
+Parse the player's character description and generate a complete character with:
+1. Name (from player input)
+2. Description (expanded from player input)
+3. Advancement tier (from player input or default to Foundation)
+4. Madra core with nature (from player input or Pure)
+5. Starting stats appropriate for their tier
+6. Starting position (choose appropriate location from world)
+7. Empty timeline (player controls their own actions)
+8. Mark as player character and add to party
+
+Important:
+- Be creative but consistent with player's description
+- Apply appropriate stat bonuses for their advancement tier
+- If they specify techniques, validate they match their tier
+- Choose a logical starting location from the world map
+- Set discoveredByPlayer to true for player character
+
+Output valid JSON matching the Character schema.`;
+
+/**
+ * Generate prompt for player character creation
+ */
+export function generatePlayerCharacterPrompt(
+  world: World,
+  playerDescription: string
+): string {
+  return `Create a player character for the world "${world.name}".
+
+World details:
+${JSON.stringify({ name: world.name, description: world.description, locations: world.locations }, null, 2)}
+
+Player's character description:
+${playerDescription}
+
+Generate a complete character JSON with:
+- Name, description, and background from player input
+- Advancement tier (default Foundation if not specified)
+- Madra core nature (default Pure if not specified)
+- Starting stats based on their tier
+- Starting position at an appropriate location from the world
+- Empty inventory with basic starting items
+- Empty timeline (player controls their actions)
+- isPlayerCharacter: true
+- isInPlayerParty: true
+- discoveredByPlayer: true
+
+Ensure the character fits naturally into the world.`;
+}
+
+/**
+ * Generate prompt for game master responses
+ */
+export function generateGameMasterPrompt(
+  world: World,
+  characters: Character[],
+  playerMessage: string,
+  chatHistory: Array<{ sender: string; content: string }>
+): string {
+  const playerCharacter = characters.find(c => c.isPlayerCharacter);
+  const nearbyCharacters = characters.filter(c => 
+    !c.isPlayerCharacter && 
+    Math.abs(c.position.x - (playerCharacter?.position.x || 0)) < 5 &&
+    Math.abs(c.position.y - (playerCharacter?.position.y || 0)) < 5
+  );
+
+  return `You are the Game Master for "${world.name}".
+
+Current situation:
+- Player character: ${playerCharacter ? `${playerCharacter.name} (${playerCharacter.advancementTier}) at position (${playerCharacter.position.x}, ${playerCharacter.position.y})` : 'Not created yet'}
+- Nearby characters: ${nearbyCharacters.map(c => `${c.name} (${c.advancementTier})`).join(', ') || 'None'}
+
+Recent conversation:
+${chatHistory.slice(-3).map(msg => `${msg.sender}: ${msg.content}`).join('\n')}
+
+Player message: ${playerMessage}
+
+As Game Master:
+1. Narrate what happens based on the player's action
+2. Reveal information they can perceive (based on their tier and proximity)
+3. Generate encounters or events if appropriate
+4. Update character states as needed
+5. Keep the world feeling alive and reactive
+
+Respond naturally and engagingly. Do NOT output JSON unless specifically updating game state.
+Your response should be narrative text that advances the story.`;
+}
