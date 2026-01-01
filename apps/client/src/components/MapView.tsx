@@ -7,6 +7,7 @@ import ReactFlow, {
   useEdgesState,
   NodeTypes,
   Panel,
+  useStore,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useGameStore } from '../store/gameStore';
@@ -32,9 +33,10 @@ const CharacterGroupNode: React.FC<{ data: any }> = ({ data }) => {
   const { setSelectedCharacter } = useGameStore();
   const characters = data.characters || [];
   const [showList, setShowList] = useState(false);
+  const zoom = useStore((state) => state.transform[2]);
   
   return (
-    <div className="relative">
+    <div className="relative" style={{ transform: `scale(${1 / zoom})`, transformOrigin: 'center' }}>
       {/* Group count badge */}
       <div className="absolute -top-2 -right-2 bg-accent text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center z-10 shadow-lg">
         {characters.length}
@@ -89,6 +91,7 @@ const CharacterGroupNode: React.FC<{ data: any }> = ({ data }) => {
 const CharacterNode: React.FC<{ data: any }> = ({ data }) => {
   const { setSelectedCharacter } = useGameStore();
   const character = data.character;
+  const zoom = useStore((state) => state.transform[2]);
   
   // Safe access with fallbacks
   const name = character?.name || 'Unknown';
@@ -99,7 +102,7 @@ const CharacterNode: React.FC<{ data: any }> = ({ data }) => {
   const avatarUrl = character?.avatarUrl;
   
   return (
-    <div className="relative">
+    <div className="relative" style={{ transform: `scale(${1 / zoom})`, transformOrigin: 'center' }}>
       {/* Avatar overlay - positioned above the main node */}
       {avatarUrl && (
         <div
@@ -151,6 +154,7 @@ const LocationNode: React.FC<{ data: any }> = ({ data }) => {
   const { setSelectedLocation, characters } = useGameStore();
   const location: Location = data.location;
   const [showTooltip, setShowTooltip] = useState(false);
+  const zoom = useStore((state) => state.transform[2]);
   
   // Calculate distance from player
   const playerCharacter = characters.find(c => c.isPlayerCharacter);
@@ -193,6 +197,7 @@ const LocationNode: React.FC<{ data: any }> = ({ data }) => {
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
       className="cursor-pointer relative"
+      style={{ transform: `scale(${1 / zoom})`, transformOrigin: 'center' }}
     >
       <div
         className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition-transform"
@@ -220,6 +225,7 @@ const LocationNode: React.FC<{ data: any }> = ({ data }) => {
 const MarkerNode: React.FC<{ data: any }> = ({ data }) => {
   const { setSelectedCharacter, setSelectedLocation, characters, world } = useGameStore();
   const { type, entityId, name } = data;
+  const zoom = useStore((state) => state.transform[2]);
   
   const handleClick = () => {
     if (type === 'character') {
@@ -243,6 +249,7 @@ const MarkerNode: React.FC<{ data: any }> = ({ data }) => {
       onClick={handleClick}
       className="cursor-pointer bg-accent text-white rounded-full p-2 shadow-lg hover:scale-110 transition-transform"
       title={name}
+      style={{ transform: `scale(${1 / zoom})`, transformOrigin: 'center' }}
     >
       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -790,8 +797,8 @@ export const MapView: React.FC = () => {
         fitView
         attributionPosition="bottom-left"
         style={{ background: '#1a1a1a' }}
-        panOnScroll={true}
-        preventScrolling={false}
+        minZoom={0.1}
+        maxZoom={2}
       >
         <Controls />
         <Background color="#2a2a2a" gap={16} />
