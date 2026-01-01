@@ -178,7 +178,12 @@ export function generateGameMasterSystemPromptWithState(
       goal: c.currentGoal || null,
       isPlayer: c.isPlayerCharacter || false,
       isParty: c.isInPlayerParty || false,
-      inventory: c.inventory.map(i => ({ id: i.id, name: i.name, type: i.type, qty: i.quantity })),
+      inventory: (c.inventory || []).map(i => ({
+        id: i.id,
+        name: i.name,
+        type: i.type,
+        qty: i.quantity ?? 1
+      })),
     })),
     locations: (world.map?.locations || []).map(l => ({
       id: l.id,
