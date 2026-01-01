@@ -261,6 +261,7 @@ export const MapView: React.FC = () => {
     name: string;
     position: { x: number; y: number };
   }>>([]);
+  const [mouseCoords, setMouseCoords] = useState<{ x: number; y: number } | null>(null);
   
   // Debug logging
   React.useEffect(() => {
@@ -479,7 +480,21 @@ export const MapView: React.FC = () => {
       className="h-full bg-game-bg relative"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
+      onMouseMove={(e) => {
+        const reactFlowBounds = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const x = ((e.clientX - reactFlowBounds.left) / 100).toFixed(1);
+        const y = ((e.clientY - reactFlowBounds.top) / 100).toFixed(1);
+        setMouseCoords({ x: parseFloat(x), y: parseFloat(y) });
+      }}
+      onMouseLeave={() => setMouseCoords(null)}
     >
+      {/* Mouse Coordinates Tooltip */}
+      {mouseCoords && (
+        <div className="absolute top-2 left-2 bg-black bg-opacity-75 text-white px-3 py-1 rounded text-sm font-mono z-50 pointer-events-none">
+          ({mouseCoords.x}, {mouseCoords.y})
+        </div>
+      )}
+      
       {world.map.backgroundImageUrl && (
         <div
           className="absolute inset-0 bg-cover bg-center opacity-40"

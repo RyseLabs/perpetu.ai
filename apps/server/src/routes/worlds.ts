@@ -222,4 +222,29 @@ export const worldRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
   });
+  
+  /**
+   * DELETE /api/worlds/:worldId
+   * Delete a world and all its data
+   */
+  fastify.delete<{
+    Params: { worldId: string };
+  }>('/:worldId', async (request, reply) => {
+    try {
+      const { worldId } = request.params;
+      
+      await fileStorage.deleteWorld(worldId);
+      
+      return reply.send({
+        success: true,
+        message: `World ${worldId} deleted successfully`,
+      });
+    } catch (error) {
+      console.error('Delete world error:', error);
+      return reply.code(500).send({
+        error: 'Failed to delete world',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
 };

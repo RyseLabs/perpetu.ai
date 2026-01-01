@@ -1,6 +1,9 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import https from 'https';
+import http from 'http';
 import { World, Character, WorldEvent, ChatMessage } from '@perpetu-ai/models';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Type guard to check if error is a Node.js error with code
@@ -14,8 +17,42 @@ function isNodeError(error: unknown): error is NodeJS.ErrnoException {
 }
 
 /**
+ * Download image from URL and save with GUID filename
+ */
+async function downloadImage(url: string, savePath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const client = url.startsWith('https') ? https : http;
+    
+    client.get(url, (response) => {
+      if (response.statusCode !== 200) {
+        reject(new Error(`Failed to download image: ${response.statusCode}`));
+        return;
+      }
+      
+      const guid = uuidv4();
+      const ext = path.extname(new URL(url).pathname) || '.png';
+      const filename = `${guid}${ext}`;
+      const filepath = path.join(savePath, filename);
+      
+      const fileStream = require('fs').createWriteStream(filepath);
+      response.pipe(fileStream);
+      
+      fileStream.on('finish', () => {
+        fileStream.close();
+        resolve(filename);
+      });
+      
+      fileStream.on('error', (err: Error) => {
+        fs.unlink(filepath).catch(() => {});
+        reject(err);
+      });
+    }).on('error', reject);
+  });
+}
+
+/**
  * Simple file-based storage for game state
- * Stores data in JSON files in the ./data directory
+ * Each world gets its own directory structure
  */
 export class FileStorage {
   private dataDir: string;
@@ -30,10 +67,6 @@ export class FileStorage {
   async init(): Promise<void> {
     try {
       await fs.mkdir(this.dataDir, { recursive: true });
-      await fs.mkdir(path.join(this.dataDir, 'worlds'), { recursive: true });
-      await fs.mkdir(path.join(this.dataDir, 'characters'), { recursive: true });
-      await fs.mkdir(path.join(this.dataDir, 'events'), { recursive: true });
-      await fs.mkdir(path.join(this.dataDir, 'chat'), { recursive: true });
     } catch (error) {
       console.error('Failed to initialize storage:', error);
       throw error;
@@ -41,10 +74,53 @@ export class FileStorage {
   }
   
   /**
-   * Save world to file
+   * Get world-specific directory path
+   */
+  private getWorldDir(worldId: string): string {
+    return path.join(this.dataDir, 'saves', worldId);
+  }
+  
+  /**
+   * Initialize world-specific directories
+   */
+  private async initWorldDir(worldId: string): Promise<void> {
+    const worldDir = this.getWorldDir(worldId);
+    await fs.mkdir(worldDir, { recursive: true });
+    await fs.mkdir(path.join(worldDir, 'characters'), { recursive: true });
+    await fs.mkdir(path.join(worldDir, 'events'), { recursive: true });
+    await fs.mkdir(path.join(worldDir, 'images'), { recursive: true });
+  }
+  
+  /**
+   * Download and store image locally, return local filename
+   */
+  async downloadAndStoreImage(worldId: string, imageUrl: string): Promise<string> {
+    const worldDir = this.getWorldDir(worldId);
+    const imagesDir = path.join(worldDir, 'images');
+    await fs.mkdir(imagesDir, { recursive: true });
+    
+    try {
+      const filename = await downloadImage(imageUrl, imagesDir);
+      return filename;
+    } catch (error) {
+      console.error('Failed to download image:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Get local image path
+   */
+  getImagePath(worldId: string, filename: string): string {
+    return path.join(this.getWorldDir(worldId), 'images', filename);
+  }
+  
+  /**
+   * Save world to its own directory
    */
   async saveWorld(world: World): Promise<void> {
-    const filePath = path.join(this.dataDir, 'worlds', `${world.id}.json`);
+    await this.initWorldDir(world.id);
+    const filePath = path.join(this.getWorldDir(world.id), 'world.json');
     await fs.writeFile(filePath, JSON.stringify(world, null, 2), 'utf-8');
   }
   
@@ -53,7 +129,7 @@ export class FileStorage {
    */
   async getWorld(worldId: string): Promise<World | null> {
     try {
-      const filePath = path.join(this.dataDir, 'worlds', `${worldId}.json`);
+      const filePath = path.join(this.getWorldDir(worldId), 'world.json');
       const data = await fs.readFile(filePath, 'utf-8');
       return JSON.parse(data) as World;
     } catch (error) {
@@ -69,14 +145,19 @@ export class FileStorage {
    */
   async listWorlds(): Promise<World[]> {
     try {
-      const worldsDir = path.join(this.dataDir, 'worlds');
-      const files = await fs.readdir(worldsDir);
+      const savesDir = path.join(this.dataDir, 'saves');
+      await fs.mkdir(savesDir, { recursive: true });
+      const worldDirs = await fs.readdir(savesDir);
       const worlds: World[] = [];
       
-      for (const file of files) {
-        if (file.endsWith('.json')) {
-          const data = await fs.readFile(path.join(worldsDir, file), 'utf-8');
+      for (const worldDir of worldDirs) {
+        try {
+          const worldFile = path.join(savesDir, worldDir, 'world.json');
+          const data = await fs.readFile(worldFile, 'utf-8');
           worlds.push(JSON.parse(data) as World);
+        } catch (error) {
+          // Skip invalid world directories
+          console.warn(`Skipping invalid world directory: ${worldDir}`);
         }
       }
       
@@ -87,10 +168,23 @@ export class FileStorage {
   }
   
   /**
-   * Save character to file
+   * Delete world and all its data
+   */
+  async deleteWorld(worldId: string): Promise<void> {
+    const worldDir = this.getWorldDir(worldId);
+    try {
+      await fs.rm(worldDir, { recursive: true, force: true });
+    } catch (error) {
+      console.error(`Failed to delete world ${worldId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Save character to world directory
    */
   async saveCharacter(worldId: string, character: Character): Promise<void> {
-    const worldDir = path.join(this.dataDir, 'characters', worldId);
+    const worldDir = path.join(this.getWorldDir(worldId), 'characters');
     await fs.mkdir(worldDir, { recursive: true });
     const filePath = path.join(worldDir, `${character.id}.json`);
     await fs.writeFile(filePath, JSON.stringify(character, null, 2), 'utf-8');
@@ -101,7 +195,7 @@ export class FileStorage {
    */
   async getCharacter(worldId: string, characterId: string): Promise<Character | null> {
     try {
-      const filePath = path.join(this.dataDir, 'characters', worldId, `${characterId}.json`);
+      const filePath = path.join(this.getWorldDir(worldId), 'characters', `${characterId}.json`);
       const data = await fs.readFile(filePath, 'utf-8');
       return JSON.parse(data) as Character;
     } catch (error) {
@@ -117,7 +211,8 @@ export class FileStorage {
    */
   async getWorldCharacters(worldId: string): Promise<Character[]> {
     try {
-      const worldDir = path.join(this.dataDir, 'characters', worldId);
+      const worldDir = path.join(this.getWorldDir(worldId), 'characters');
+      await fs.mkdir(worldDir, { recursive: true });
       const files = await fs.readdir(worldDir);
       const characters: Character[] = [];
       
@@ -159,7 +254,7 @@ export class FileStorage {
    * Save event to file
    */
   async saveEvent(worldId: string, event: WorldEvent): Promise<void> {
-    const worldDir = path.join(this.dataDir, 'events', worldId);
+    const worldDir = path.join(this.getWorldDir(worldId), 'events');
     await fs.mkdir(worldDir, { recursive: true });
     const filePath = path.join(worldDir, `${event.id}.json`);
     await fs.writeFile(filePath, JSON.stringify(event, null, 2), 'utf-8');
@@ -170,7 +265,8 @@ export class FileStorage {
    */
   async getWorldEvents(worldId: string): Promise<WorldEvent[]> {
     try {
-      const worldDir = path.join(this.dataDir, 'events', worldId);
+      const worldDir = path.join(this.getWorldDir(worldId), 'events');
+      await fs.mkdir(worldDir, { recursive: true });
       const files = await fs.readdir(worldDir);
       const events: WorldEvent[] = [];
       
@@ -191,38 +287,11 @@ export class FileStorage {
   }
   
   /**
-   * Delete world and all associated data
-   */
-  async deleteWorld(worldId: string): Promise<void> {
-    const worldFile = path.join(this.dataDir, 'worlds', `${worldId}.json`);
-    const charactersDir = path.join(this.dataDir, 'characters', worldId);
-    const eventsDir = path.join(this.dataDir, 'events', worldId);
-    
-    try {
-      await fs.unlink(worldFile);
-    } catch (error) {
-      // Ignore if file doesn't exist
-    }
-    
-    try {
-      await fs.rm(charactersDir, { recursive: true, force: true });
-    } catch (error) {
-      // Ignore if directory doesn't exist
-    }
-    
-    try {
-      await fs.rm(eventsDir, { recursive: true, force: true });
-    } catch (error) {
-      // Ignore if directory doesn't exist
-    }
-  }
-  
-  /**
    * Save chat message to world's chat history
    */
   async saveChatMessage(worldId: string, message: ChatMessage): Promise<void> {
-    const chatFile = path.join(this.dataDir, 'chat', `${worldId}.json`);
-    await fs.mkdir(path.join(this.dataDir, 'chat'), { recursive: true });
+    const chatFile = path.join(this.getWorldDir(worldId), 'chat.json');
+    await fs.mkdir(this.getWorldDir(worldId), { recursive: true });
     
     // Load existing messages
     let messages: ChatMessage[] = [];
@@ -245,7 +314,7 @@ export class FileStorage {
    */
   async getWorldChat(worldId: string): Promise<ChatMessage[]> {
     try {
-      const chatFile = path.join(this.dataDir, 'chat', `${worldId}.json`);
+      const chatFile = path.join(this.getWorldDir(worldId), 'chat.json');
       const data = await fs.readFile(chatFile, 'utf-8');
       return JSON.parse(data) as ChatMessage[];
     } catch (error) {

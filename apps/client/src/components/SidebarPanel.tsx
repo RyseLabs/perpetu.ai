@@ -30,10 +30,14 @@ export const SidebarPanel: React.FC = () => {
   };
   
   // Handle click - only if not dragging
-  const handleClick = (callback: () => void) => (e: React.MouseEvent) => {
+  const handleClick = (entityType: string, entityName: string, callback: () => void) => (e: React.MouseEvent) => {
     e.preventDefault();
+    console.log(`[SidebarPanel] Click detected on ${entityType}: ${entityName}, isDragging: ${isDragging}`);
     if (!isDragging) {
+      console.log(`[SidebarPanel] Executing callback for ${entityType}: ${entityName}`);
       callback();
+    } else {
+      console.log(`[SidebarPanel] Click ignored due to dragging state`);
     }
   };
   
@@ -112,10 +116,11 @@ export const SidebarPanel: React.FC = () => {
                         id: character.id,
                         name: name
                       })}
-                      onClick={() => {
+                      onDragEnd={handleDragEnd}
+                      onClick={handleClick('party member', name, () => {
                         setSelectedCharacter(character);
                         setSelectedLocation(null);
-                      }}
+                      })}
                       className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 cursor-move ${
                         selectedCharacter?.id === character.id
                           ? 'bg-accent text-white'
@@ -169,7 +174,7 @@ export const SidebarPanel: React.FC = () => {
                         name: name
                       })}
                       onDragEnd={handleDragEnd}
-                      onClick={handleClick(() => {
+                      onClick={handleClick('NPC', name, () => {
                         setSelectedCharacter(character);
                         setSelectedLocation(null);
                       })}
@@ -230,7 +235,7 @@ export const SidebarPanel: React.FC = () => {
                         name: name
                       })}
                       onDragEnd={handleDragEnd}
-                      onClick={handleClick(() => {
+                      onClick={handleClick('location', name, () => {
                         setSelectedLocation(location);
                         setSelectedCharacter(null);
                       })}

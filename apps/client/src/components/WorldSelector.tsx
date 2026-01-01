@@ -86,6 +86,37 @@ export const WorldSelector: React.FC = () => {
     clearChatMessages();
   };
   
+  const deleteWorld = async (worldId: string, worldName: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!confirm(`Are you sure you want to delete "${worldName}"? This cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/worlds/${worldId}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        // Remove from available worlds
+        setAvailableWorlds(availableWorlds.filter(w => w.id !== worldId));
+        
+        // If deleted world was loaded, reset
+        if (world?.id === worldId) {
+          startNewGame();
+        }
+        
+        addChatMessage('system', `✓ World "${worldName}" deleted successfully`);
+      } else {
+        throw new Error('Failed to delete world');
+      }
+    } catch (error) {
+      console.error('Failed to delete world:', error);
+      addChatMessage('system', `❌ Failed to delete world. Please try again.`);
+    }
+  };
+  
   return (
     <div className="relative">
       <button
@@ -140,18 +171,31 @@ export const WorldSelector: React.FC = () => {
               </div>
             ) : (
               availableWorlds.map((w) => (
-                <button
+                <div
                   key={w.id}
-                  onClick={() => loadWorld(w.id)}
-                  className={`w-full px-4 py-2 text-left hover:bg-accent/20 transition-colors border-b border-panel-border last:border-b-0 ${
+                  className={`w-full flex items-center border-b border-panel-border last:border-b-0 ${
                     world?.id === w.id ? 'bg-accent/10' : ''
                   }`}
                 >
-                  <div className="font-semibold">{w.name}</div>
-                  <div className="text-xs text-text-secondary">
-                    {new Date(w.createdAt).toLocaleDateString()}
-                  </div>
-                </button>
+                  <button
+                    onClick={() => loadWorld(w.id)}
+                    className="flex-1 px-4 py-2 text-left hover:bg-accent/20 transition-colors"
+                  >
+                    <div className="font-semibold">{w.name}</div>
+                    <div className="text-xs text-text-secondary">
+                      {new Date(w.createdAt).toLocaleDateString()}
+                    </div>
+                  </button>
+                  <button
+                    onClick={(e) => deleteWorld(w.id, w.name, e)}
+                    className="px-3 py-2 hover:bg-red-500/20 text-red-500 transition-colors"
+                    title="Delete world"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
               ))
             )}
           </div>
