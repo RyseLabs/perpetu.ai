@@ -189,7 +189,7 @@ export function generateGameMasterSystemPromptWithState(
       id: l.id,
       name: l.name,
       type: l.type,
-      pos: [l.position.x, l.position.y],
+      pos: [l.position?.x ?? 0, l.position?.y ?? 0],
       faction: l.faction || null,
       discovered: l.discoveredByPlayer || false,
     })),
