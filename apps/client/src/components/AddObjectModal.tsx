@@ -25,6 +25,12 @@ export const AddObjectModal: React.FC<AddObjectModalProps> = ({ isOpen, onClose 
     const now = Date.now();
     const API_BASE = 'http://localhost:3000/api';
 
+    // Check if world exists
+    if (!world || !world.id) {
+      alert('No world selected. Please select or create a world first.');
+      return;
+    }
+
     try {
       if (objectType === 'character') {
         // Create new character
@@ -70,7 +76,7 @@ export const AddObjectModal: React.FC<AddObjectModalProps> = ({ isOpen, onClose 
         };
 
         // Save to backend
-        const response = await fetch(`${API_BASE}/worlds/${world?.id}/characters`, {
+        const response = await fetch(`${API_BASE}/worlds/${world.id}/characters`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newCharacter),
@@ -98,7 +104,7 @@ export const AddObjectModal: React.FC<AddObjectModalProps> = ({ isOpen, onClose 
         };
 
         // Save to backend
-        const response = await fetch(`${API_BASE}/worlds/${world?.id}/locations`, {
+        const response = await fetch(`${API_BASE}/worlds/${world.id}/locations`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newLocation),
