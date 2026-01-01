@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import ReactFlow, {
   Node,
   Controls,
@@ -7,16 +7,36 @@ import ReactFlow, {
   useEdgesState,
   NodeTypes,
   Panel,
+  useStore,
+  useReactFlow,
+  ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useGameStore } from '../store/gameStore';
-import type { Location } from '@perpetu-ai/models';
 
 /**
  * Calculate distance between two points
  */
 function calculateDistance(x1: number, y1: number, x2: number, y2: number): number {
   return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+}
+
+// Map configuration constants
+const DEFAULT_MAP_SIZE = 100; // Default map dimensions in units
+const COORDINATE_SCALE_FACTOR = 100; // Scale factor for converting game coordinates to display pixels
+const MAP_IMAGE_OPACITY = 0.4; // Background image opacity
+const MAP_IMAGE_FILTER = 'sepia(20%) contrast(90%)'; // Filter applied to background image
+const BACKGROUND_Z_INDEX = -1; // Z-index for background image node
+
+/**
+ * Custom hook to get inverse zoom transform style for fixed-size nodes
+ */
+function useZoomTransform() {
+  const zoom = useStore((state) => state.transform[2]);
+  return React.useMemo(
+    () => ({ transform: `scale(${1 / zoom})`, transformOrigin: 'center' }),
+    [zoom]
+  );
 }
 
 /**
@@ -26,9 +46,10 @@ const CharacterGroupNode: React.FC<{ data: any }> = ({ data }) => {
   const { setSelectedCharacter } = useGameStore();
   const characters = data.characters || [];
   const [showList, setShowList] = useState(false);
+  const zoomTransform = useZoomTransform();
   
   return (
-    <div className="relative">
+    <div className="relative" style={zoomTransform}>
       {/* Group count badge */}
       <div className="absolute -top-2 -right-2 bg-accent text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center z-10 shadow-lg">
         {characters.length}
@@ -78,194 +99,101 @@ const CharacterGroupNode: React.FC<{ data: any }> = ({ data }) => {
 };
 
 /**
- * Custom node component for characters on the map
- */
-const CharacterNode: React.FC<{ data: any }> = ({ data }) => {
-  const { setSelectedCharacter } = useGameStore();
-  const character = data.character;
-  
-  // Safe access with fallbacks
-  const name = character?.name || 'Unknown';
-  const tier = character?.advancementTier || 'Unknown';
-  const isDiscovered = character?.discoveredByPlayer || false;
-  const isPlayer = character?.isPlayerCharacter || false;
-  const isInParty = character?.isInPlayerParty || false;
-  const avatarUrl = character?.avatarUrl;
-  
-  return (
-    <div className="relative">
-      {/* Avatar overlay - positioned above the main node */}
-      {avatarUrl && (
-        <div
-          style={{
-            position: 'absolute',
-            top: -40,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 10,
-          }}
-        >
-          <img 
-            src={avatarUrl}
-            alt={name}
-            className="w-10 h-10 rounded-full border-2 object-cover shadow-md"
-            style={{
-              borderColor: isInParty ? '#6366f1' : isPlayer ? '#10b981' : '#fbbf24',
-            }}
-          />
-        </div>
-      )}
-      
-      {/* Character node */}
-      <div
-        onClick={() => setSelectedCharacter(character)}
-        className="cursor-pointer bg-panel-bg border-2 border-accent rounded-lg p-2 min-w-[100px] hover:bg-panel-border transition-colors shadow-lg"
-        style={{
-          borderColor: isInParty ? '#6366f1' : isPlayer ? '#10b981' : '#2a2a2a',
-        }}
-      >
-        <div className="text-xs font-bold truncate">
-          {isDiscovered ? name : 'Unknown'}
-        </div>
-        <div className="text-xs text-text-secondary">
-          {tier}
-        </div>
-        {isPlayer && (
-          <div className="text-xs text-green-400 font-bold">★ You</div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-/**
- * Custom node component for locations on the map
- */
-const LocationNode: React.FC<{ data: any }> = ({ data }) => {
-  const { setSelectedLocation, characters } = useGameStore();
-  const location: Location = data.location;
-  const [showTooltip, setShowTooltip] = useState(false);
-  
-  // Calculate distance from player
-  const playerCharacter = characters.find(c => c.isPlayerCharacter);
-  const distance = playerCharacter && playerCharacter.position
-    ? calculateDistance(
-        playerCharacter.position.x,
-        playerCharacter.position.y,
-        location.position.x,
-        location.position.y
-      ).toFixed(1)
-    : 'N/A';
-  
-  const locationTypeColors: Record<string, string> = {
-    city: '#fbbf24',
-    town: '#a78bfa',
-    dungeon: '#ef4444',
-    landmark: '#3b82f6',
-    wilderness: '#10b981',
-    other: '#6b7280',
-  };
-  
-  const locationTypeIcons: Record<string, string> = {
-    city: '🏰',
-    town: '🏘️',
-    dungeon: '⚔️',
-    landmark: '⭐',
-    wilderness: '🌲',
-    other: '📍',
-  };
-  
-  const locationType = location.type || 'other';
-  const locationName = location.name || 'Unknown Location';
-  
-  return (
-    <div
-      onClick={() => {
-        setSelectedLocation(location);
-        console.log(location)
-      }}
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-      className="cursor-pointer relative"
-    >
-      <div
-        className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition-transform"
-        style={{ backgroundColor: locationTypeColors[locationType] || '#6b7280' }}
-      >
-        <span className="text-lg">{locationTypeIcons[locationType] || '📍'}</span>
-      </div>
-      
-      {showTooltip && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-panel-bg border border-panel-border rounded-lg p-2 shadow-xl z-50 whitespace-nowrap">
-          <div className="text-xs font-bold text-accent">{locationName}</div>
-          <div className="text-xs text-text-secondary capitalize">{locationType}</div>
-          {playerCharacter && playerCharacter.position && (
-            <div className="text-xs text-text-secondary">Distance: {distance} units</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-/**
  * Custom node component for dropped markers on the map
+ * This is now the universal marker type for all entities (locations and characters)
  */
 const MarkerNode: React.FC<{ data: any }> = ({ data }) => {
-  const { setSelectedCharacter, setSelectedLocation, characters, world } = useGameStore();
   const { type, entityId, name } = data;
+  const { characters, world } = useGameStore();
+  const zoomTransform = useZoomTransform();
   
-  const handleClick = () => {
-    if (type === 'character') {
-      const char = characters.find(c => c.id === entityId);
-      if (char) {
-        setSelectedCharacter(char);
-        setSelectedLocation(null);
-      }
-    } else if (type === 'location') {
-      const loc = world?.map?.locations?.find(l => l.id === entityId);
-      if (loc) {
-        console.log(loc)
-        setSelectedLocation(loc);
-        setSelectedCharacter(null);
-      }
-    }
-  };
+  // Get the entity to show its image
+  const entity = type === 'character' 
+    ? characters.find(c => c.id === entityId)
+    : world?.map?.locations?.find(l => l.id === entityId);
+  
+  const avatarUrl = type === 'character' ? (entity as any)?.avatarUrl : null;
   
   return (
     <div
-      onClick={handleClick}
-      className="cursor-pointer bg-accent text-white rounded-full p-2 shadow-lg hover:scale-110 transition-transform"
-      title={name}
+      className="cursor-pointer relative flex flex-col items-center"
+      style={zoomTransform}
     >
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
+      {/* Unified element: image/icon, name, and marker pin */}
+      <div className="flex flex-col items-center">
+        {/* Image or icon with pin background */}
+        <div className="relative">
+          {avatarUrl ? (
+            <img 
+              src={avatarUrl}
+              alt={name}
+              className="w-10 h-10 rounded-full border-2 border-accent object-cover shadow-lg"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center border-2 border-white shadow-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+          )}
+        </div>
+        
+        {/* Name label directly below */}
+        <div className="bg-accent text-white border border-white rounded px-2 py-1 shadow-md hover:bg-opacity-90 transition-colors mt-1">
+          <div className="text-xs font-bold text-center whitespace-nowrap">{name}</div>
+        </div>
+      </div>
     </div>
+  );
+};
+
+
+/**
+ * Background image node data type
+ */
+interface BackgroundImageData {
+  imageUrl: string;
+  width: number;
+  height: number;
+}
+
+/**
+ * Custom node component for background map image
+ */
+const BackgroundImageNode: React.FC<{ data: BackgroundImageData }> = ({ data }) => {
+  const { imageUrl, width, height } = data;
+  
+  return (
+    <div
+      style={{
+        width: `${width}px`,
+        height: `${height}px`,
+        backgroundImage: `url(${imageUrl})`,
+        backgroundSize: 'contain',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center',
+        opacity: MAP_IMAGE_OPACITY,
+        filter: MAP_IMAGE_FILTER,
+        pointerEvents: 'none',
+      }}
+    />
   );
 };
 
 const nodeTypes: NodeTypes = {
-  character: CharacterNode,
   characterGroup: CharacterGroupNode,
-  location: LocationNode,
   marker: MarkerNode,
+  backgroundImage: BackgroundImageNode,
 };
 
 /**
- * Map view component with draggable, zoomable world map
+ * Inner map view component with ReactFlow context access
  */
-export const MapView: React.FC = () => {
-  const { world, characters } = useGameStore();
-  const [markers, setMarkers] = useState<Array<{
-    id: string;
-    type: 'character' | 'location';
-    entityId: string;
-    name: string;
-    position: { x: number; y: number };
-  }>>([]);
+const MapViewInner: React.FC = () => {
+  const { world, characters, updateCharacter, updateLocation, setSelectedCharacter, setSelectedLocation } = useGameStore();
   const [mouseCoords, setMouseCoords] = useState<{ x: number; y: number } | null>(null);
+  const { screenToFlowPosition } = useReactFlow();
   
   // Debug logging
   React.useEffect(() => {
@@ -324,37 +252,185 @@ export const MapView: React.FC = () => {
     });
   };
   
+  // Handle node clicks to select entities
+  const handleNodeClick = useCallback((_event: any, node: Node) => {
+    console.log('[MapView] Node clicked:', node);
+    console.log('[MapView] Node type:', node.type);
+    console.log('[MapView] Node data:', node.data);
+    
+    // All location and character nodes now use 'marker' type with entityId in data
+    if (node.type === 'marker') {
+      const { type, entityId } = node.data as any;
+      console.log('[MapView] Marker type:', type, 'entityId:', entityId);
+      
+      if (type === 'character') {
+        console.log('[MapView] Looking for character in:', characters.length, 'characters');
+        const char = characters.find(c => c.id === entityId);
+        console.log('[MapView] Found character:', char);
+        if (char) {
+          console.log('[MapView] Calling setSelectedCharacter with:', char.name);
+          setSelectedCharacter(char);
+          setSelectedLocation(null);
+          console.log('[MapView] Selected character:', char);
+        } else {
+          console.warn('[MapView] Character not found with id:', entityId);
+        }
+      } else if (type === 'location') {
+        console.log('[MapView] Looking for location in world map');
+        const loc = world?.map?.locations?.find(l => l.id === entityId);
+        console.log('[MapView] Found location:', loc);
+        if (loc) {
+          console.log('[MapView] Calling setSelectedLocation with:', loc.name);
+          setSelectedLocation(loc);
+          setSelectedCharacter(null);
+          console.log('[MapView] Selected location:', loc);
+        } else {
+          console.warn('[MapView] Location not found with id:', entityId);
+        }
+      }
+    }
+    
+    // Handle character group node clicks (still separate type for dropdown functionality)
+    if (node.type === 'characterGroup') {
+      const characters = (node.data as any)?.characters;
+      if (characters && characters.length > 0) {
+        // For group nodes, select the first character
+        setSelectedCharacter(characters[0]);
+        setSelectedLocation(null);
+        console.log('[MapView] Selected character from group:', characters[0]);
+      }
+    }
+  }, [setSelectedLocation, setSelectedCharacter, characters, world]);
+  
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [, , onEdgesChange] = useEdgesState([]);
   
-  // Handle when a marker node is dragged - update the object's coordinates
-  const handleNodeDragStop = React.useCallback((event: any, node: Node) => {
-    // Check if this is a marker node
-    if (node.id.startsWith('marker-')) {
-      const marker = markers.find(m => `marker-${m.id}` === node.id);
-      if (marker) {
-        console.log(`[MapView] Marker ${marker.name} moved to:`, node.position);
-        
-        // Update the marker position in state
-        const updatedMarkers = markers.map(m => 
-          m.id === marker.id 
-            ? { ...m, position: { x: node.position.x, y: node.position.y } }
-            : m
-        );
-        setMarkers(updatedMarkers);
-        
-        // TODO: In the future, we could update the actual character/location coordinates
-        // For now, markers are independent visual waypoints
-        console.log(`[MapView] Marker position updated - this is a visual waypoint, not updating entity coordinates`);
+  // Handle when a node is being dragged - update coordinates in real-time
+  const handleNodeDrag = useCallback((_event: any, node: Node) => {
+    // Get map dimensions
+    const mapWidth = world?.map?.width || DEFAULT_MAP_SIZE;
+    const mapHeight = world?.map?.height || DEFAULT_MAP_SIZE;
+    
+    // Constrain node position to map bounds (in display coordinates)
+    const maxX = mapWidth * COORDINATE_SCALE_FACTOR;
+    const maxY = mapHeight * COORDINATE_SCALE_FACTOR;
+    
+    const constrainedX = Math.max(0, Math.min(node.position.x, maxX));
+    const constrainedY = Math.max(0, Math.min(node.position.y, maxY));
+    
+    // If position was constrained, update the node position
+    if (constrainedX !== node.position.x || constrainedY !== node.position.y) {
+      node.position.x = constrainedX;
+      node.position.y = constrainedY;
+    }
+    
+    // Convert display coordinates back to game coordinates
+    const newPosition = {
+      x: constrainedX / COORDINATE_SCALE_FACTOR,
+      y: constrainedY / COORDINATE_SCALE_FACTOR,
+    };
+    
+    // Handle marker nodes (individual characters or locations)
+    if (node.type === 'marker') {
+      const { type } = node.data as any;
+      
+      // Update mouse coordinates display during drag
+      setMouseCoords({ 
+        x: parseFloat(newPosition.x.toFixed(1)), 
+        y: parseFloat(newPosition.y.toFixed(1)) 
+      });
+      
+      // Only update character positions in real-time during drag
+      // Location positions will be updated on drag stop to avoid re-render conflicts
+      if (type === 'character') {
+        const { entityId } = node.data as any;
+        if (entityId) {
+          updateCharacter(entityId, { position: newPosition });
+        }
       }
     }
-  }, [markers]);
+    // Handle character group nodes - only update mouse coords, not positions
+    // Positions will be updated on drag stop to avoid conflicts with re-renders
+    else if (node.type === 'characterGroup') {
+      // Update mouse coordinates display during drag
+      setMouseCoords({ 
+        x: parseFloat(newPosition.x.toFixed(1)), 
+        y: parseFloat(newPosition.y.toFixed(1)) 
+      });
+    }
+  }, [updateCharacter, updateLocation, world, setMouseCoords]);
+  
+  // Handle when a node drag is complete
+  const handleNodeDragStop = useCallback((_event: any, node: Node) => {
+    console.log('[MapView] Node drag stop:', node.type, node.id, node.data);
+    
+    if (node.type === 'marker') {
+      const { type, entityId, name } = node.data as any;
+      console.log(`[MapView] Marker ${name} drag complete at:`, node.position);
+      console.log(`[MapView] Entity type: ${type}, entityId: ${entityId}`);
+      
+      const finalPosition = {
+        x: node.position.x / COORDINATE_SCALE_FACTOR,
+        y: node.position.y / COORDINATE_SCALE_FACTOR,
+      };
+      console.log(`[MapView] Final position for ${type} ${entityId}:`, finalPosition);
+      
+      // Update location positions on drag stop (deferred to avoid re-render conflicts)
+      if (type === 'location' && entityId) {
+        console.log(`[MapView] Calling updateLocation for ${entityId} with position:`, finalPosition);
+        updateLocation(entityId, { position: finalPosition });
+      }
+      
+      // TODO: Send update to backend
+    } else if (node.type === 'characterGroup') {
+      const { characters } = node.data as any;
+      console.log(`[MapView] Character group drag complete at:`, node.position);
+      
+      const finalPosition = {
+        x: node.position.x / COORDINATE_SCALE_FACTOR,
+        y: node.position.y / COORDINATE_SCALE_FACTOR,
+      };
+      console.log(`[MapView] Final position for group (${characters?.length} characters):`, finalPosition);
+      
+      // Update all characters in the group to the final position
+      if (characters && Array.isArray(characters)) {
+        characters.forEach((char: any) => {
+          console.log(`[MapView] Updating character ${char.id} in group to:`, finalPosition);
+          updateCharacter(char.id, { position: finalPosition });
+        });
+      }
+      
+      // TODO: Send update to backend
+    }
+  }, [updateCharacter, updateLocation]);
   
   // Update nodes when characters or locations change
   React.useEffect(() => {
     if (!world || !Array.isArray(characters)) {
       setNodes([]);
       return;
+    }
+    
+    // Step 0: Create background image node if available (positioned at origin, behind everything)
+    const backgroundNodes: Node[] = [];
+    if (world.map.backgroundImageUrl) {
+      // Use map dimensions or default to a large size
+      const mapWidth = (world.map.width || DEFAULT_MAP_SIZE) * COORDINATE_SCALE_FACTOR;
+      const mapHeight = (world.map.height || DEFAULT_MAP_SIZE) * COORDINATE_SCALE_FACTOR;
+      
+      backgroundNodes.push({
+        id: 'background-image',
+        type: 'backgroundImage',
+        position: { x: 0, y: 0 },
+        data: { 
+          imageUrl: world.map.backgroundImageUrl,
+          width: mapWidth,
+          height: mapHeight,
+        },
+        draggable: false,
+        selectable: false,
+        zIndex: BACKGROUND_Z_INDEX,
+      });
     }
     
     // Get valid locations
@@ -380,12 +456,17 @@ export const MapView: React.FC = () => {
       return true;
     });
     
-    // Step 1: Create location nodes
-    const locationNodes: Node[] = validLocations.map((location) => ({
+    // Step 1: Create marker nodes for all locations (not just custom ones)
+    const locationMarkerNodes: Node[] = validLocations.map((location) => ({
       id: `loc-${location.id}`,
-      type: 'location',
-      position: { x: location.position.x * 100, y: location.position.y * 100 },
-      data: { location },
+      type: 'marker',
+      position: { x: location.position.x * COORDINATE_SCALE_FACTOR, y: location.position.y * COORDINATE_SCALE_FACTOR },
+      data: { 
+        type: 'location' as const,
+        entityId: location.id,
+        name: location.name || 'Unknown Location',
+      },
+      draggable: true,
     }));
     
     // Step 2: Find characters at locations (these won't get separate pins)
@@ -401,40 +482,79 @@ export const MapView: React.FC = () => {
     );
     const characterGroups = groupCharactersByPosition(ungroupedCharacters);
     
-    // Step 4: Create character/group nodes
-    const characterNodes: Node[] = Array.from(characterGroups.entries()).map(([key, chars]) => {
+    // Step 4: Create marker nodes for characters (not groups - groups still use characterGroup type)
+    const characterMarkerNodes: Node[] = [];
+    const characterGroupNodes: Node[] = [];
+    
+    Array.from(characterGroups.entries()).forEach(([key, chars]) => {
       if (chars.length === 1) {
-        // Solo character node
+        // Solo character - use marker node
         const char = chars[0];
-        return {
+        characterMarkerNodes.push({
           id: `char-${char.id}`,
-          type: 'character',
-          position: { x: char.position.x * 100, y: char.position.y * 100 },
-          data: { character: char },
-        };
+          type: 'marker',
+          position: { x: char.position.x * COORDINATE_SCALE_FACTOR, y: char.position.y * COORDINATE_SCALE_FACTOR },
+          data: { 
+            type: 'character' as const,
+            entityId: char.id,
+            name: char.name || 'Unknown',
+          },
+          draggable: true,
+        });
       } else {
-        // Group node
+        // Group node - keep as characterGroup for dropdown functionality
         const [x, y] = key.split(',').map(Number);
-        return {
+        characterGroupNodes.push({
           id: `group-${key}`,
           type: 'characterGroup',
-          position: { x: x * 100, y: y * 100 },
+          position: { x: x * COORDINATE_SCALE_FACTOR, y: y * COORDINATE_SCALE_FACTOR },
           data: { characters: chars },
-        };
+          draggable: true,
+        });
       }
     });
     
-    // Step 5: Create marker nodes
-    const markerNodes: Node[] = markers.map(marker => ({
-      id: `marker-${marker.id}`,
-      type: 'marker',
-      position: { x: marker.position.x, y: marker.position.y },
-      data: { type: marker.type, entityId: marker.entityId, name: marker.name },
-      draggable: true,
-    }));
+    setNodes([...backgroundNodes, ...locationMarkerNodes, ...characterMarkerNodes, ...characterGroupNodes]);
+  }, [characters, world, setNodes]);
+  
+  // Handle drag over
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+  
+  // Handle drop from side panel
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
     
-    setNodes([...locationNodes, ...characterNodes, ...markerNodes]);
-  }, [characters, world, markers, setNodes]);
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      const { type, id, name } = data;
+      
+      // Convert screen position to flow position (accounts for pan/zoom)
+      const flowPosition = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+      
+      // Convert flow position to game coordinates
+      const gameX = flowPosition.x / COORDINATE_SCALE_FACTOR;
+      const gameY = flowPosition.y / COORDINATE_SCALE_FACTOR;
+      
+      // Update the entity's position based on type
+      if (type === 'character') {
+        const char = characters.find(c => c.id === id);
+        if (char) {
+          updateCharacter(id, { position: { x: gameX, y: gameY } });
+          console.log(`[MapView] Dropped character ${name} at (${gameX.toFixed(1)}, ${gameY.toFixed(1)})`);
+        }
+      } else if (type === 'location') {
+        const loc = world?.map?.locations?.find(l => l.id === id);
+        if (loc) {
+          updateLocation(id, { position: { x: gameX, y: gameY } });
+          console.log(`[MapView] Dropped location ${name} at (${gameX.toFixed(1)}, ${gameY.toFixed(1)})`);
+        }
+      }
+    } catch (error) {
+      console.error('Error handling drop:', error);
+    }
+  };
   
   if (!world) {
     return (
@@ -456,51 +576,6 @@ export const MapView: React.FC = () => {
     );
   }
   
-  // Handle drag over
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-  };
-  
-  // Handle drop
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    
-    try {
-      const data = JSON.parse(e.dataTransfer.getData('application/json'));
-      const { type, id, name } = data;
-      
-      // Get the ReactFlow bounds
-      const reactFlowBounds = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const x = e.clientX - reactFlowBounds.left;
-      const y = e.clientY - reactFlowBounds.top;
-      
-      // Check if marker already exists for this entity
-      const existingMarkerIndex = markers.findIndex(m => m.entityId === id);
-      
-      if (existingMarkerIndex >= 0) {
-        // Update existing marker position
-        const updatedMarkers = [...markers];
-        updatedMarkers[existingMarkerIndex] = {
-          ...updatedMarkers[existingMarkerIndex],
-          position: { x, y },
-        };
-        setMarkers(updatedMarkers);
-      } else {
-        // Create new marker (max 1 per entity)
-        const newMarker = {
-          id: `${type}-${id}-${Date.now()}`,
-          type,
-          entityId: id,
-          name,
-          position: { x, y },
-        };
-        setMarkers([...markers, newMarker]);
-      }
-    } catch (error) {
-      console.error('Error handling drop:', error);
-    }
-  };
   
   return (
     <div 
@@ -508,10 +583,12 @@ export const MapView: React.FC = () => {
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onMouseMove={(e) => {
-        const reactFlowBounds = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        const x = ((e.clientX - reactFlowBounds.left) / 100).toFixed(1);
-        const y = ((e.clientY - reactFlowBounds.top) / 100).toFixed(1);
-        setMouseCoords({ x: parseFloat(x), y: parseFloat(y) });
+        // Convert screen position to flow position (accounts for pan/zoom)
+        const flowPosition = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+        // Convert flow position to game coordinates
+        const gameX = (flowPosition.x / COORDINATE_SCALE_FACTOR).toFixed(1);
+        const gameY = (flowPosition.y / COORDINATE_SCALE_FACTOR).toFixed(1);
+        setMouseCoords({ x: parseFloat(gameX), y: parseFloat(gameY) });
       }}
       onMouseLeave={() => setMouseCoords(null)}
     >
@@ -522,25 +599,30 @@ export const MapView: React.FC = () => {
         </div>
       )}
       
-      {world.map.backgroundImageUrl && (
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-40"
-          style={{
-            backgroundImage: `url(${world.map.backgroundImageUrl})`,
-            filter: 'sepia(20%) contrast(90%)',
-          }}
-        />
-      )}
       <ReactFlow
         nodes={nodes}
         edges={[]}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeClick={handleNodeClick}
+        onNodeDrag={handleNodeDrag}
         onNodeDragStop={handleNodeDragStop}
         nodeTypes={nodeTypes}
         fitView
         attributionPosition="bottom-left"
-        style={{ background: world.map.backgroundImageUrl ? 'transparent' : '#1a1a1a' }}
+        style={{ background: '#1a1a1a' }}
+        minZoom={0.1}
+        maxZoom={2}
+        translateExtent={[
+          [-200, -200],
+          [(world.map.width || DEFAULT_MAP_SIZE) * COORDINATE_SCALE_FACTOR + 200, 
+           (world.map.height || DEFAULT_MAP_SIZE) * COORDINATE_SCALE_FACTOR + 200]
+        ]}
+        nodeExtent={[
+          [0, 0],
+          [(world.map.width || DEFAULT_MAP_SIZE) * COORDINATE_SCALE_FACTOR, 
+           (world.map.height || DEFAULT_MAP_SIZE) * COORDINATE_SCALE_FACTOR]
+        ]}
       >
         <Controls />
         <Background color="#2a2a2a" gap={16} />
@@ -555,5 +637,16 @@ export const MapView: React.FC = () => {
         </Panel>
       </ReactFlow>
     </div>
+  );
+};
+
+/**
+ * Map view component wrapper with ReactFlowProvider
+ */
+export const MapView: React.FC = () => {
+  return (
+    <ReactFlowProvider>
+      <MapViewInner />
+    </ReactFlowProvider>
   );
 };

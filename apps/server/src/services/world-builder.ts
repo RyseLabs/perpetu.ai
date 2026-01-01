@@ -67,6 +67,12 @@ export class WorldBuilderService {
       worldData.world.map.locations = [];
     }
     
+    // Ensure all locations have unique IDs
+    worldData.world.map.locations = worldData.world.map.locations.map((loc, index) => ({
+      ...loc,
+      id: loc.id || `loc-${now}-${index}-${Math.random().toString(36).substr(2, 9)}`,
+    }));
+    
     const world: World = {
       ...worldData.world,
       id: `world-${Date.now()}`,
@@ -82,8 +88,10 @@ export class WorldBuilderService {
           generateMapImagePrompt(world),
           '1792x1024'
         );
-        world.map.backgroundImageUrl = imageUrl;
-        console.log('Map image generated:', imageUrl);
+        console.log('Map image generated, downloading locally...');
+        const filename = await fileStorage.downloadAndStoreImage(world.id, imageUrl);
+        world.map.backgroundImageUrl = `/api/worlds/${world.id}/images/${filename}`;
+        console.log('Map image saved locally:', filename);
       } catch (error) {
         console.error('Failed to generate map image:', error);
         // Continue without map image - we'll use a fallback
@@ -111,8 +119,11 @@ export class WorldBuilderService {
       try {
         console.log(`Generating avatar for ${charData.name}...`);
         const avatarPrompt = `Fantasy RPG character portrait: ${charData.name}. ${charData.description || 'A mysterious cultivator'}. Fantasy art style, detailed face portrait, ${charData.advancementTier} tier cultivator, heroic fantasy aesthetic, dramatic lighting.`;
-        avatarUrl = await this.aiClient.generateImage(avatarPrompt, '256x256');
-        console.log(`Avatar generated for ${charData.name}`);
+        const generatedUrl = await this.aiClient.generateImage(avatarPrompt, '256x256');
+        console.log(`Avatar generated for ${charData.name}, downloading locally...`);
+        const filename = await fileStorage.downloadAndStoreImage(world.id, generatedUrl);
+        avatarUrl = `/api/worlds/${world.id}/images/${filename}`;
+        console.log(`Avatar saved locally for ${charData.name}:`, filename);
       } catch (error) {
         console.warn(`Failed to generate avatar for ${charData.name}:`, error);
         // Continue without avatar
