@@ -309,6 +309,12 @@ const MapViewInner: React.FC = () => {
         } else if (type === 'location') {
           updateLocation(entityId, { position: newPosition });
         }
+        
+        // Update mouse coordinates display during drag
+        setMouseCoords({ 
+          x: parseFloat(newPosition.x.toFixed(1)), 
+          y: parseFloat(newPosition.y.toFixed(1)) 
+        });
       }
     }
   }, [updateCharacter, updateLocation]);
@@ -455,14 +461,12 @@ const MapViewInner: React.FC = () => {
       const data = JSON.parse(e.dataTransfer.getData('application/json'));
       const { type, id, name } = data;
       
-      // Get the ReactFlow bounds and calculate drop position
-      const reactFlowBounds = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const x = e.clientX - reactFlowBounds.left;
-      const y = e.clientY - reactFlowBounds.top;
+      // Convert screen position to flow position (accounts for pan/zoom)
+      const flowPosition = screenToFlowPosition({ x: e.clientX, y: e.clientY });
       
-      // Convert to game coordinates
-      const gameX = x / COORDINATE_SCALE_FACTOR;
-      const gameY = y / COORDINATE_SCALE_FACTOR;
+      // Convert flow position to game coordinates
+      const gameX = flowPosition.x / COORDINATE_SCALE_FACTOR;
+      const gameY = flowPosition.y / COORDINATE_SCALE_FACTOR;
       
       // Update the entity's position based on type
       if (type === 'character') {
