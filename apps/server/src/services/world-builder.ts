@@ -67,6 +67,12 @@ export class WorldBuilderService {
       worldData.world.map.locations = [];
     }
     
+    // Ensure all locations have unique IDs
+    worldData.world.map.locations = worldData.world.map.locations.map((loc, index) => ({
+      ...loc,
+      id: loc.id || `loc-${now}-${index}-${Math.random().toString(36).substr(2, 9)}`,
+    }));
+    
     const world: World = {
       ...worldData.world,
       id: `world-${Date.now()}`,
