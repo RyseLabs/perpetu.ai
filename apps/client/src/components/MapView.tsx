@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import ReactFlow, {
   Node,
   Controls,
@@ -7,6 +7,7 @@ import ReactFlow, {
   useEdgesState,
   NodeTypes,
   Panel,
+  useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useGameStore } from '../store/gameStore';
@@ -246,6 +247,145 @@ const MarkerNode: React.FC<{ data: any }> = ({ data }) => {
   );
 };
 
+/**
+ * Modal for adding map markers
+ */
+interface AddMarkerModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onAddMarker: (type: 'npc' | 'location', entityId: string, name: string) => void;
+  characters: any[];
+  locations: Location[];
+  existingMarkers: Set<string>;
+}
+
+const AddMarkerModal: React.FC<AddMarkerModalProps> = ({
+  isOpen,
+  onClose,
+  onAddMarker,
+  characters,
+  locations,
+  existingMarkers,
+}) => {
+  const [selectedType, setSelectedType] = useState<'npc' | 'location' | null>(null);
+  const [selectedEntity, setSelectedEntity] = useState<string | null>(null);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = () => {
+    if (selectedType && selectedEntity) {
+      const entity = selectedType === 'npc' 
+        ? characters.find(c => c.id === selectedEntity)
+        : locations.find(l => l.id === selectedEntity);
+      
+      if (entity) {
+        onAddMarker(selectedType, selectedEntity, entity.name);
+        setSelectedType(null);
+        setSelectedEntity(null);
+        onClose();
+      }
+    }
+  };
+
+  const availableNPCs = characters.filter(c => !existingMarkers.has(c.id));
+  const availableLocations = locations.filter(l => !existingMarkers.has(l.id));
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-panel-bg border-2 border-panel-border rounded-lg w-full max-w-md max-h-[80vh] overflow-y-auto p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-accent">Add Map Marker</h2>
+          <button
+            onClick={onClose}
+            className="text-text-secondary hover:text-accent transition-colors text-2xl"
+          >
+            ×
+          </button>
+        </div>
+
+        {!selectedType ? (
+          <div className="space-y-3">
+            <p className="text-sm text-text-secondary mb-4">Select marker type:</p>
+            <button
+              onClick={() => setSelectedType('npc')}
+              disabled={availableNPCs.length === 0}
+              className="w-full py-3 px-4 bg-panel-border text-white rounded hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              NPC ({availableNPCs.length} available)
+            </button>
+            <button
+              onClick={() => setSelectedType('location')}
+              disabled={availableLocations.length === 0}
+              className="w-full py-3 px-4 bg-panel-border text-white rounded hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Location ({availableLocations.length} available)
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <button
+              onClick={() => {
+                setSelectedType(null);
+                setSelectedEntity(null);
+              }}
+              className="text-sm text-accent hover:underline mb-2"
+            >
+              ← Back to type selection
+            </button>
+            <p className="text-sm text-text-secondary mb-2">
+              Select {selectedType === 'npc' ? 'NPC' : 'Location'}:
+            </p>
+            <div className="max-h-64 overflow-y-auto space-y-2">
+              {selectedType === 'npc' ? (
+                availableNPCs.map(char => (
+                  <button
+                    key={char.id}
+                    onClick={() => setSelectedEntity(char.id)}
+                    className={`w-full p-3 rounded text-left transition-colors ${
+                      selectedEntity === char.id
+                        ? 'bg-accent text-white'
+                        : 'bg-panel-border hover:bg-opacity-70'
+                    }`}
+                  >
+                    <div className="font-semibold">{char.name}</div>
+                    <div className="text-xs text-text-secondary">
+                      {char.advancementTier || 'Unknown'} - {char.description?.substring(0, 50) || 'No description'}
+                    </div>
+                  </button>
+                ))
+              ) : (
+                availableLocations.map(loc => (
+                  <button
+                    key={loc.id}
+                    onClick={() => setSelectedEntity(loc.id)}
+                    className={`w-full p-3 rounded text-left transition-colors ${
+                      selectedEntity === loc.id
+                        ? 'bg-accent text-white'
+                        : 'bg-panel-border hover:bg-opacity-70'
+                    }`}
+                  >
+                    <div className="font-semibold">{loc.name}</div>
+                    <div className="text-xs text-text-secondary capitalize">
+                      {loc.type} - {loc.description?.substring(0, 50) || 'No description'}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+            <button
+              onClick={handleSubmit}
+              disabled={!selectedEntity}
+              className="w-full py-2 px-4 bg-accent text-white rounded hover:bg-accent-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+            >
+              Add Marker
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const nodeTypes: NodeTypes = {
   character: CharacterNode,
   characterGroup: CharacterGroupNode,
@@ -257,7 +397,7 @@ const nodeTypes: NodeTypes = {
  * Map view component with draggable, zoomable world map
  */
 export const MapView: React.FC = () => {
-  const { world, characters } = useGameStore();
+  const { world, characters, updateCharacter } = useGameStore();
   const [markers, setMarkers] = useState<Array<{
     id: string;
     type: 'character' | 'location';
@@ -266,6 +406,8 @@ export const MapView: React.FC = () => {
     position: { x: number; y: number };
   }>>([]);
   const [mouseCoords, setMouseCoords] = useState<{ x: number; y: number } | null>(null);
+  const [showAddMarkerModal, setShowAddMarkerModal] = useState(false);
+  const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
   
   // Debug logging
   React.useEffect(() => {
@@ -327,8 +469,8 @@ export const MapView: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [, , onEdgesChange] = useEdgesState([]);
   
-  // Handle when a marker node is dragged - update the object's coordinates
-  const handleNodeDragStop = React.useCallback((event: any, node: Node) => {
+  // Handle when a marker node is dragged - update the object's coordinates in real-time
+  const handleNodeDragStop = useCallback((event: any, node: Node) => {
     // Check if this is a marker node
     if (node.id.startsWith('marker-')) {
       const marker = markers.find(m => `marker-${m.id}` === node.id);
@@ -343,11 +485,30 @@ export const MapView: React.FC = () => {
         );
         setMarkers(updatedMarkers);
         
-        // TODO: In the future, we could update the actual character/location coordinates
-        // For now, markers are independent visual waypoints
-        console.log(`[MapView] Marker position updated - this is a visual waypoint, not updating entity coordinates`);
+        // Update the actual entity coordinates in real-time
+        if (marker.type === 'character') {
+          const newPosition = {
+            x: node.position.x / 100, // Convert back from display coordinates
+            y: node.position.y / 100,
+          };
+          console.log(`[MapView] Updating character ${marker.entityId} position to:`, newPosition);
+          updateCharacter(marker.entityId, { position: newPosition });
+          
+          // TODO: Send update to backend
+        } else if (marker.type === 'location' && world) {
+          // Update location in world
+          const newPosition = {
+            x: node.position.x / 100,
+            y: node.position.y / 100,
+          };
+          console.log(`[MapView] Updating location ${marker.entityId} position to:`, newPosition);
+          
+          // TODO: Update location coordinates in backend
+          // For now, just log the update
+        }
       }
     }
+  }, [markers, updateCharacter, world]);
   }, [markers]);
   
   // Update nodes when characters or locations change
@@ -502,6 +663,43 @@ export const MapView: React.FC = () => {
     }
   };
   
+  // Handle adding a marker from the modal
+  const handleAddMarker = useCallback((type: 'npc' | 'location', entityId: string, name: string) => {
+    // Check if marker already exists
+    if (markers.some(m => m.entityId === entityId)) {
+      console.warn('Marker already exists for this entity');
+      return;
+    }
+    
+    // Get center of viewport if reactFlowInstance is available
+    let centerX = 500; // Default fallback
+    let centerY = 500;
+    
+    if (reactFlowInstance) {
+      const viewport = reactFlowInstance.getViewport();
+      const bounds = document.querySelector('.react-flow')?.getBoundingClientRect();
+      if (bounds) {
+        // Calculate center in flow coordinates
+        centerX = (bounds.width / 2 - viewport.x) / viewport.zoom;
+        centerY = (bounds.height / 2 - viewport.y) / viewport.zoom;
+      }
+    }
+    
+    // Create marker at center
+    const newMarker = {
+      id: `${type}-${entityId}-${Date.now()}`,
+      type: type === 'npc' ? 'character' as const : 'location' as const,
+      entityId,
+      name,
+      position: { x: centerX, y: centerY },
+    };
+    
+    setMarkers([...markers, newMarker]);
+  }, [markers, reactFlowInstance]);
+  
+  // Get set of entity IDs that already have markers
+  const existingMarkerIds = new Set(markers.map(m => m.entityId));
+  
   return (
     <div 
       className="h-full bg-game-bg relative"
@@ -537,12 +735,18 @@ export const MapView: React.FC = () => {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeDragStop={handleNodeDragStop}
+        onInit={setReactFlowInstance}
         nodeTypes={nodeTypes}
         fitView
         attributionPosition="bottom-left"
         style={{ background: world.map.backgroundImageUrl ? 'transparent' : '#1a1a1a' }}
+        zoomOnScroll={false}
+        zoomOnPinch={false}
+        zoomOnDoubleClick={false}
+        panOnScroll={true}
+        preventScrolling={true}
       >
-        <Controls />
+        <Controls showZoom={false} />
         <Background color="#2a2a2a" gap={16} />
         <Panel position="top-right" className="bg-panel-bg border border-panel-border rounded p-2 text-xs">
           <div className="font-semibold text-accent mb-1">{world.name}</div>
@@ -554,6 +758,27 @@ export const MapView: React.FC = () => {
           </div>
         </Panel>
       </ReactFlow>
+      
+      {/* Add Marker Button - Fixed bottom right */}
+      <button
+        onClick={() => setShowAddMarkerModal(true)}
+        className="fixed bottom-6 right-6 bg-accent text-white rounded-full p-4 shadow-lg hover:bg-accent-dark transition-colors z-40"
+        title="Add Map Marker"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
+      
+      {/* Add Marker Modal */}
+      <AddMarkerModal
+        isOpen={showAddMarkerModal}
+        onClose={() => setShowAddMarkerModal(false)}
+        onAddMarker={handleAddMarker}
+        characters={characters}
+        locations={world?.map?.locations || []}
+        existingMarkers={existingMarkerIds}
+      />
     </div>
   );
 };

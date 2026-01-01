@@ -132,6 +132,52 @@ export const worldRoutes: FastifyPluginAsync = async (fastify) => {
   });
   
   /**
+   * GET /api/worlds/:worldId/images/:filename
+   * Serve an image from a world's images directory
+   */
+  fastify.get<{
+    Params: { worldId: string; filename: string };
+  }>('/:worldId/images/:filename', async (request, reply) => {
+    try {
+      const { worldId, filename } = request.params;
+      
+      // Security: prevent path traversal
+      if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+        return reply.code(400).send({
+          error: 'Invalid filename',
+        });
+      }
+      
+      const imagePath = fileStorage.getImagePath(worldId, filename);
+      
+      // Check if file exists and send it
+      const fs = await import('fs/promises');
+      try {
+        await fs.access(imagePath);
+        const fileBuffer = await fs.readFile(imagePath);
+        
+        // Determine content type based on extension
+        const ext = filename.split('.').pop()?.toLowerCase() || 'png';
+        const contentType = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png';
+        
+        return reply
+          .type(contentType)
+          .send(fileBuffer);
+      } catch {
+        return reply.code(404).send({
+          error: 'Image not found',
+        });
+      }
+    } catch (error) {
+      console.error('Serve image error:', error);
+      return reply.code(500).send({
+        error: 'Failed to serve image',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  /**
    * GET /api/worlds/:worldId/characters
    * Get all characters in a world
    */
