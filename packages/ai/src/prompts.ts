@@ -117,7 +117,7 @@ Important:
 }
 
 /**
- * System prompt for the Game Master AI
+ * System prompt for the Game Master AI (static base)
  */
 export const GAME_MASTER_SYSTEM_PROMPT = `You are the Game Master AI for a turn-based tabletop RPG. You narrate events, manage NPCs, and govern the game world.
 
@@ -150,6 +150,55 @@ Advancement system:
 
 Always output deterministic, schema-validated JSON for game state updates.
 Frequently update character positions and equipment in your responses.`;
+
+/**
+ * Generate system prompt with game state for the Game Master AI
+ */
+export function generateGameMasterSystemPromptWithState(
+  world: World,
+  characters: Character[]
+): string {
+  // Create minified game state representation
+  const gameState = {
+    world: {
+      id: world.id,
+      name: world.name,
+      turn: world.currentTurn,
+      factions: world.factions,
+    },
+    characters: characters.map(c => ({
+      id: c.id,
+      name: c.name,
+      tier: c.advancementTier,
+      pos: [c.position?.x ?? 0, c.position?.y ?? 0],
+      hp: [c.stats?.currentHp ?? 0, c.stats?.maxHp ?? 0],
+      madra: c.madraCore ? [c.madraCore.currentMadra, c.madraCore.maxMadra, c.madraCore.nature] : null,
+      faction: c.faction || null,
+      activity: c.activity || 'idle',
+      goal: c.currentGoal || null,
+      isPlayer: c.isPlayerCharacter || false,
+      isParty: c.isInPlayerParty || false,
+      inventory: c.inventory.map(i => ({ id: i.id, name: i.name, type: i.type, qty: i.quantity })),
+    })),
+    locations: (world.map?.locations || []).map(l => ({
+      id: l.id,
+      name: l.name,
+      type: l.type,
+      pos: [l.position.x, l.position.y],
+      faction: l.faction || null,
+      discovered: l.discoveredByPlayer || false,
+    })),
+  };
+  
+  const gameStateJson = JSON.stringify(gameState);
+  
+  return `${GAME_MASTER_SYSTEM_PROMPT}
+
+CURRENT GAME STATE (minified JSON):
+${gameStateJson}
+
+Use this game state to provide contextually accurate responses and track all changes.`;
+}
 
 /**
  * Generate prompt for turn simulation
@@ -343,7 +392,7 @@ Ensure the character fits naturally into the world.`;
 }
 
 /**
- * Generate prompt for game master responses
+ * Generate prompt for game master responses (user message part)
  */
 export function generateGameMasterPrompt(
   world: World,
@@ -363,31 +412,6 @@ export function generateGameMasterPrompt(
     .map(i => i.name)
     .join(', ') || 'None';
 
-  // Create minified 2D array representation of game state
-  const gameStateArray = {
-    characters: characters.map(c => ({
-      id: c.id,
-      name: c.name,
-      tier: c.advancementTier,
-      pos: [c.position?.x ?? 0, c.position?.y ?? 0],
-      hp: [c.stats?.currentHp ?? 0, c.stats?.maxHp ?? 0],
-      madra: c.madraCore ? [c.madraCore.currentMadra, c.madraCore.maxMadra, c.madraCore.nature] : null,
-      faction: c.faction || null,
-      activity: c.activity || 'idle',
-      isPlayer: c.isPlayerCharacter || false,
-      isParty: c.isInPlayerParty || false,
-    })),
-    locations: (world.map?.locations || []).map(l => ({
-      id: l.id,
-      name: l.name,
-      type: l.type,
-      pos: [l.position.x, l.position.y],
-      faction: l.faction || null,
-    })),
-  };
-  
-  const gameStateJson = JSON.stringify(gameStateArray);
-
   return `You are the Game Master for "${world.name}".
 
 Current situation:
@@ -396,9 +420,6 @@ Current situation:
 - Madra: ${playerCharacter ? `${playerCharacter.madraCore?.currentMadra ?? 0}/${playerCharacter.madraCore?.maxMadra ?? 0}` : 'N/A'}
 - Equipment: ${equipment}
 - Nearby characters: ${nearbyCharacters.map(c => `${c.name} (${c.advancementTier}) at (${c.position?.x?.toFixed(1) ?? '?'}, ${c.position?.y?.toFixed(1) ?? '?'})`).join(', ') || 'None'}
-
-FULL GAME STATE (use this for complete context):
-${gameStateJson}
 
 Recent conversation:
 ${chatHistory.slice(-3).map(msg => `${msg.sender}: ${msg.content}`).join('\n')}
