@@ -125,18 +125,20 @@ const CharacterNode: React.FC<{ data: any }> = ({ data }) => {
           <img 
             src={avatarUrl}
             alt={name}
-            className="w-12 h-12 rounded-full border-3 object-cover shadow-lg mb-1"
+            className="w-12 h-12 rounded-full object-cover shadow-lg mb-1"
             style={{
               borderColor: isInParty ? '#6366f1' : isPlayer ? '#10b981' : '#fbbf24',
               borderWidth: '3px',
+              borderStyle: 'solid',
             }}
           />
         ) : (
           <div 
-            className="w-12 h-12 rounded-full border-3 flex items-center justify-center shadow-lg mb-1 bg-panel-bg"
+            className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg mb-1 bg-panel-bg"
             style={{
               borderColor: isInParty ? '#6366f1' : isPlayer ? '#10b981' : '#fbbf24',
               borderWidth: '3px',
+              borderStyle: 'solid',
             }}
           >
             <span className="text-xl">👤</span>
