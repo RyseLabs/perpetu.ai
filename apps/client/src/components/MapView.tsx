@@ -362,9 +362,12 @@ const MapViewInner: React.FC = () => {
   
   // Handle when a node drag is complete
   const handleNodeDragStop = useCallback((_event: any, node: Node) => {
+    console.log('[MapView] Node drag stop:', node.type, node.id, node.data);
+    
     if (node.type === 'marker') {
       const { type, entityId, name } = node.data as any;
       console.log(`[MapView] Marker ${name} drag complete at:`, node.position);
+      console.log(`[MapView] Entity type: ${type}, entityId: ${entityId}`);
       
       const finalPosition = {
         x: node.position.x / COORDINATE_SCALE_FACTOR,
@@ -374,6 +377,7 @@ const MapViewInner: React.FC = () => {
       
       // Update location positions on drag stop (deferred to avoid re-render conflicts)
       if (type === 'location' && entityId) {
+        console.log(`[MapView] Calling updateLocation for ${entityId} with position:`, finalPosition);
         updateLocation(entityId, { position: finalPosition });
       }
       
@@ -391,6 +395,7 @@ const MapViewInner: React.FC = () => {
       // Update all characters in the group to the final position
       if (characters && Array.isArray(characters)) {
         characters.forEach((char: any) => {
+          console.log(`[MapView] Updating character ${char.id} in group to:`, finalPosition);
           updateCharacter(char.id, { position: finalPosition });
         });
       }
