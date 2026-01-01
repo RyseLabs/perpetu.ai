@@ -141,14 +141,24 @@ export const worldRoutes: FastifyPluginAsync = async (fastify) => {
     try {
       const { worldId, filename } = request.params;
       
-      // Security: prevent path traversal
+      // Security: prevent path traversal with comprehensive checks
       if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
         return reply.code(400).send({
           error: 'Invalid filename',
         });
       }
       
+      const path = await import('path');
       const imagePath = fileStorage.getImagePath(worldId, filename);
+      
+      // Verify the resolved path is within the expected directory
+      const worldImagesDir = path.dirname(imagePath);
+      const normalizedPath = path.normalize(imagePath);
+      if (!normalizedPath.startsWith(worldImagesDir)) {
+        return reply.code(400).send({
+          error: 'Invalid file path',
+        });
+      }
       
       // Check if file exists and send it
       const fs = await import('fs/promises');
