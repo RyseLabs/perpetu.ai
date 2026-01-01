@@ -7,7 +7,6 @@ import ReactFlow, {
   useEdgesState,
   NodeTypes,
   Panel,
-  useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useGameStore } from '../store/gameStore';
@@ -470,7 +469,7 @@ export const MapView: React.FC = () => {
   const [, , onEdgesChange] = useEdgesState([]);
   
   // Handle when a marker node is dragged - update the object's coordinates in real-time
-  const handleNodeDragStop = useCallback((event: any, node: Node) => {
+  const handleNodeDragStop = useCallback((_event: any, node: Node) => {
     // Check if this is a marker node
     if (node.id.startsWith('marker-')) {
       const marker = markers.find(m => `marker-${m.id}` === node.id);
@@ -509,7 +508,6 @@ export const MapView: React.FC = () => {
       }
     }
   }, [markers, updateCharacter, world]);
-  }, [markers]);
   
   // Update nodes when characters or locations change
   React.useEffect(() => {
