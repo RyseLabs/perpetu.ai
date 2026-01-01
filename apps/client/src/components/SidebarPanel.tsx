@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
+import { AddObjectModal } from './AddObjectModal';
 
 type Tab = 'party' | 'npcs' | 'locations';
 
@@ -14,11 +15,26 @@ interface DragData {
  */
 export const SidebarPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('party');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const { characters, world, selectedCharacter, selectedLocation, setSelectedCharacter, setSelectedLocation } = useGameStore();
   
   const handleDragStart = (e: React.DragEvent, data: DragData) => {
+    setIsDragging(true);
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setData('application/json', JSON.stringify(data));
+  };
+  
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
+  
+  // Handle click - only if not dragging
+  const handleClick = (callback: () => void) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!isDragging) {
+      callback();
+    }
   };
   
   const partyMembers = characters.filter((char) => char.isInPlayerParty);
@@ -26,7 +42,19 @@ export const SidebarPanel: React.FC = () => {
   const locations = world?.map?.locations || [];
   
   return (
-    <div className="h-full bg-panel-bg border-r border-panel-border flex flex-col">
+    <div className="h-full bg-panel-bg border-r border-panel-border flex flex-col relative">
+      {/* Add Button */}
+      <button
+        onClick={() => setIsAddModalOpen(true)}
+        className="absolute top-2 right-2 z-10 w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center text-xl font-bold hover:bg-accent-dark transition-colors shadow-lg"
+        title="Add new character or location"
+      >
+        +
+      </button>
+      
+      {/* Add Object Modal */}
+      <AddObjectModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
+      
       {/* Tabs */}
       <div className="flex border-b border-panel-border">
         <button
@@ -140,10 +168,11 @@ export const SidebarPanel: React.FC = () => {
                         id: character.id,
                         name: name
                       })}
-                      onClick={() => {
+                      onDragEnd={handleDragEnd}
+                      onClick={handleClick(() => {
                         setSelectedCharacter(character);
                         setSelectedLocation(null);
-                      }}
+                      })}
                       className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 cursor-move ${
                         selectedCharacter?.id === character.id
                           ? 'bg-accent text-white'
@@ -200,10 +229,11 @@ export const SidebarPanel: React.FC = () => {
                         id: location.id,
                         name: name
                       })}
-                      onClick={() => {
+                      onDragEnd={handleDragEnd}
+                      onClick={handleClick(() => {
                         setSelectedLocation(location);
                         setSelectedCharacter(null);
-                      }}
+                      })}
                       className={`w-full text-left p-3 rounded-lg transition-colors cursor-move ${
                         selectedLocation?.id === location.id
                           ? 'bg-accent text-white'

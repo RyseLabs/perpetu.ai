@@ -363,6 +363,31 @@ export function generateGameMasterPrompt(
     .map(i => i.name)
     .join(', ') || 'None';
 
+  // Create minified 2D array representation of game state
+  const gameStateArray = {
+    characters: characters.map(c => ({
+      id: c.id,
+      name: c.name,
+      tier: c.advancementTier,
+      pos: [c.position?.x ?? 0, c.position?.y ?? 0],
+      hp: [c.stats?.currentHp ?? 0, c.stats?.maxHp ?? 0],
+      madra: c.madraCore ? [c.madraCore.currentMadra, c.madraCore.maxMadra, c.madraCore.nature] : null,
+      faction: c.faction || null,
+      activity: c.activity || 'idle',
+      isPlayer: c.isPlayerCharacter || false,
+      isParty: c.isInPlayerParty || false,
+    })),
+    locations: (world.map?.locations || []).map(l => ({
+      id: l.id,
+      name: l.name,
+      type: l.type,
+      pos: [l.position.x, l.position.y],
+      faction: l.faction || null,
+    })),
+  };
+  
+  const gameStateJson = JSON.stringify(gameStateArray);
+
   return `You are the Game Master for "${world.name}".
 
 Current situation:
@@ -371,6 +396,9 @@ Current situation:
 - Madra: ${playerCharacter ? `${playerCharacter.madraCore?.currentMadra ?? 0}/${playerCharacter.madraCore?.maxMadra ?? 0}` : 'N/A'}
 - Equipment: ${equipment}
 - Nearby characters: ${nearbyCharacters.map(c => `${c.name} (${c.advancementTier}) at (${c.position?.x?.toFixed(1) ?? '?'}, ${c.position?.y?.toFixed(1) ?? '?'})`).join(', ') || 'None'}
+
+FULL GAME STATE (use this for complete context):
+${gameStateJson}
 
 Recent conversation:
 ${chatHistory.slice(-3).map(msg => `${msg.sender}: ${msg.content}`).join('\n')}
