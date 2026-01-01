@@ -8,6 +8,8 @@ import ReactFlow, {
   NodeTypes,
   Panel,
   useStore,
+  useReactFlow,
+  ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useGameStore } from '../store/gameStore';
@@ -186,11 +188,12 @@ const nodeTypes: NodeTypes = {
 };
 
 /**
- * Map view component with draggable, zoomable world map
+ * Inner map view component with ReactFlow context access
  */
-export const MapView: React.FC = () => {
+const MapViewInner: React.FC = () => {
   const { world, characters, updateCharacter, updateLocation, setSelectedCharacter, setSelectedLocation } = useGameStore();
   const [mouseCoords, setMouseCoords] = useState<{ x: number; y: number } | null>(null);
+  const { screenToFlowPosition } = useReactFlow();
   
   // Debug logging
   React.useEffect(() => {
@@ -507,10 +510,12 @@ export const MapView: React.FC = () => {
       onDragOver={handleDragOver}
       onDrop={handleDrop}
       onMouseMove={(e) => {
-        const reactFlowBounds = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        const x = ((e.clientX - reactFlowBounds.left) / COORDINATE_SCALE_FACTOR).toFixed(1);
-        const y = ((e.clientY - reactFlowBounds.top) / COORDINATE_SCALE_FACTOR).toFixed(1);
-        setMouseCoords({ x: parseFloat(x), y: parseFloat(y) });
+        // Convert screen position to flow position (accounts for pan/zoom)
+        const flowPosition = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+        // Convert flow position to game coordinates
+        const gameX = (flowPosition.x / COORDINATE_SCALE_FACTOR).toFixed(1);
+        const gameY = (flowPosition.y / COORDINATE_SCALE_FACTOR).toFixed(1);
+        setMouseCoords({ x: parseFloat(gameX), y: parseFloat(gameY) });
       }}
       onMouseLeave={() => setMouseCoords(null)}
     >
@@ -549,5 +554,16 @@ export const MapView: React.FC = () => {
         </Panel>
       </ReactFlow>
     </div>
+  );
+};
+
+/**
+ * Map view component wrapper with ReactFlowProvider
+ */
+export const MapView: React.FC = () => {
+  return (
+    <ReactFlowProvider>
+      <MapViewInner />
+    </ReactFlowProvider>
   );
 };
