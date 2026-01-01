@@ -323,6 +323,29 @@ export const MapView: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [, , onEdgesChange] = useEdgesState([]);
   
+  // Handle when a marker node is dragged - update the object's coordinates
+  const handleNodeDragStop = React.useCallback((event: any, node: Node) => {
+    // Check if this is a marker node
+    if (node.id.startsWith('marker-')) {
+      const marker = markers.find(m => `marker-${m.id}` === node.id);
+      if (marker) {
+        console.log(`[MapView] Marker ${marker.name} moved to:`, node.position);
+        
+        // Update the marker position in state
+        const updatedMarkers = markers.map(m => 
+          m.id === marker.id 
+            ? { ...m, position: { x: node.position.x, y: node.position.y } }
+            : m
+        );
+        setMarkers(updatedMarkers);
+        
+        // TODO: In the future, we could update the actual character/location coordinates
+        // For now, markers are independent visual waypoints
+        console.log(`[MapView] Marker position updated - this is a visual waypoint, not updating entity coordinates`);
+      }
+    }
+  }, [markers]);
+  
   // Update nodes when characters or locations change
   React.useEffect(() => {
     if (!world || !Array.isArray(characters)) {
@@ -509,6 +532,7 @@ export const MapView: React.FC = () => {
         edges={[]}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeDragStop={handleNodeDragStop}
         nodeTypes={nodeTypes}
         fitView
         attributionPosition="bottom-left"

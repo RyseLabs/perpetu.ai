@@ -37,6 +37,9 @@ export const SidebarPanel: React.FC = () => {
   const handleClick = (entityType: string, entityName: string, callback: () => void) => (e: React.MouseEvent) => {
     e.stopPropagation();
     
+    console.log(`[SidebarPanel] Click event on ${entityType}: ${entityName}`);
+    console.log(`[SidebarPanel] Drag start position:`, dragStartPos);
+    
     // If we have a drag start position, check if mouse moved significantly
     if (dragStartPos) {
       const distance = Math.sqrt(
@@ -44,15 +47,18 @@ export const SidebarPanel: React.FC = () => {
         Math.pow(e.clientY - dragStartPos.y, 2)
       );
       
-      // If moved more than 5 pixels, consider it a drag, not a click
-      if (distance > 5) {
-        console.log(`[SidebarPanel] Click ignored - was a drag (moved ${distance.toFixed(0)}px)`);
+      console.log(`[SidebarPanel] Mouse moved ${distance.toFixed(0)}px`);
+      
+      // If moved more than 10 pixels, consider it a drag, not a click
+      if (distance > 10) {
+        console.log(`[SidebarPanel] Click ignored - was a drag`);
+        setDragStartPos(null);
         return;
       }
     }
     
-    console.log(`[SidebarPanel] Click detected on ${entityType}: ${entityName}`);
     console.log(`[SidebarPanel] Executing callback for ${entityType}: ${entityName}`);
+    setDragStartPos(null);
     callback();
   };
   
@@ -100,13 +106,13 @@ export const SidebarPanel: React.FC = () => {
       </div>
       
       {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto p-4 relative">
-        {/* Add Button - positioned at bottom right of tab content viewport */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {/* Add Button - fixed to bottom right of sidebar viewport */}
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="fixed bottom-4 right-4 z-10 w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-accent-dark transition-colors shadow-lg hover:scale-110"
+          className="fixed z-10 w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-accent-dark transition-colors shadow-lg hover:scale-110"
           title="Add new character or location"
-          style={{ position: 'absolute' }}
+          style={{ bottom: '1rem', left: 'calc(320px - 3rem - 1rem)' }}
         >
           +
         </button>
