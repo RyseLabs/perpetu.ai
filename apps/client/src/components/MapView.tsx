@@ -385,11 +385,35 @@ const AddMarkerModal: React.FC<AddMarkerModalProps> = ({
   );
 };
 
+/**
+ * Custom node component for background map image
+ */
+const BackgroundImageNode: React.FC<{ data: any }> = ({ data }) => {
+  const { imageUrl, width, height } = data;
+  
+  return (
+    <div
+      style={{
+        width: `${width}px`,
+        height: `${height}px`,
+        backgroundImage: `url(${imageUrl})`,
+        backgroundSize: 'contain',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center',
+        opacity: 0.4,
+        filter: 'sepia(20%) contrast(90%)',
+        pointerEvents: 'none',
+      }}
+    />
+  );
+};
+
 const nodeTypes: NodeTypes = {
   character: CharacterNode,
   characterGroup: CharacterGroupNode,
   location: LocationNode,
   marker: MarkerNode,
+  backgroundImage: BackgroundImageNode,
 };
 
 /**
@@ -516,6 +540,28 @@ export const MapView: React.FC = () => {
       return;
     }
     
+    // Step 0: Create background image node if available (positioned at origin, behind everything)
+    const backgroundNodes: Node[] = [];
+    if (world.map.backgroundImageUrl) {
+      // Use map dimensions or default to a large size
+      const mapWidth = (world.map.width || 100) * 100;
+      const mapHeight = (world.map.height || 100) * 100;
+      
+      backgroundNodes.push({
+        id: 'background-image',
+        type: 'backgroundImage',
+        position: { x: 0, y: 0 },
+        data: { 
+          imageUrl: world.map.backgroundImageUrl,
+          width: mapWidth,
+          height: mapHeight,
+        },
+        draggable: false,
+        selectable: false,
+        zIndex: -1,
+      });
+    }
+    
     // Get valid locations
     const validLocations = world?.map?.locations && Array.isArray(world.map.locations)
       ? world.map.locations.filter(loc => {
@@ -592,7 +638,7 @@ export const MapView: React.FC = () => {
       draggable: true,
     }));
     
-    setNodes([...locationNodes, ...characterNodes, ...markerNodes]);
+    setNodes([...backgroundNodes, ...locationNodes, ...characterNodes, ...markerNodes]);
   }, [characters, world, markers, setNodes]);
   
   if (!world) {
@@ -718,15 +764,6 @@ export const MapView: React.FC = () => {
         </div>
       )}
       
-      {world.map.backgroundImageUrl && (
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-40"
-          style={{
-            backgroundImage: `url(${world.map.backgroundImageUrl})`,
-            filter: 'sepia(20%) contrast(90%)',
-          }}
-        />
-      )}
       <ReactFlow
         nodes={nodes}
         edges={[]}
@@ -737,14 +774,11 @@ export const MapView: React.FC = () => {
         nodeTypes={nodeTypes}
         fitView
         attributionPosition="bottom-left"
-        style={{ background: world.map.backgroundImageUrl ? 'transparent' : '#1a1a1a' }}
-        zoomOnScroll={false}
-        zoomOnPinch={false}
-        zoomOnDoubleClick={false}
+        style={{ background: '#1a1a1a' }}
         panOnScroll={true}
-        preventScrolling={true}
+        preventScrolling={false}
       >
-        <Controls showZoom={false} />
+        <Controls />
         <Background color="#2a2a2a" gap={16} />
         <Panel position="top-right" className="bg-panel-bg border border-panel-border rounded p-2 text-xs">
           <div className="font-semibold text-accent mb-1">{world.name}</div>
