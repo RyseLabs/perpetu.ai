@@ -51,6 +51,7 @@ interface GameState {
   setLoadingWorld: (isLoading: boolean) => void;
   setLoadingWorlds: (isLoading: boolean) => void;
   addLocation: (location: Location) => void;
+  updateLocation: (locationId: string, updates: Partial<Location>) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -145,5 +146,24 @@ export const useGameStore = create<GameState>((set) => ({
             },
           }
         : null,
+    })),
+  
+  updateLocation: (locationId, updates) =>
+    set((state) => ({
+      world: state.world
+        ? {
+            ...state.world,
+            map: {
+              ...state.world.map,
+              locations: state.world.map.locations.map((loc) =>
+                loc.id === locationId ? { ...loc, ...updates } : loc
+              ),
+            },
+          }
+        : null,
+      selectedLocation:
+        state.selectedLocation?.id === locationId
+          ? { ...state.selectedLocation, ...updates }
+          : state.selectedLocation,
     })),
 }));

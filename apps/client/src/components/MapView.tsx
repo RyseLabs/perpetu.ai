@@ -454,7 +454,7 @@ const nodeTypes: NodeTypes = {
  * Map view component with draggable, zoomable world map
  */
 export const MapView: React.FC = () => {
-  const { world, characters, updateCharacter } = useGameStore();
+  const { world, characters, updateCharacter, updateLocation } = useGameStore();
   const [markers, setMarkers] = useState<Array<{
     id: string;
     type: 'character' | 'location';
@@ -526,15 +526,13 @@ export const MapView: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [, , onEdgesChange] = useEdgesState([]);
   
-  // Handle when a marker node is dragged - update the object's coordinates in real-time
-  const handleNodeDragStop = useCallback((_event: any, node: Node) => {
+  // Handle when a marker node is being dragged - update coordinates in real-time
+  const handleNodeDrag = useCallback((_event: any, node: Node) => {
     // Check if this is a marker node
     if (node.id.startsWith('marker-')) {
       const marker = markers.find(m => `marker-${m.id}` === node.id);
       if (marker) {
-        console.log(`[MapView] Marker ${marker.name} moved to:`, node.position);
-        
-        // Update the marker position in state
+        // Update the marker position in state during drag
         const updatedMarkers = markers.map(m => 
           m.id === marker.id 
             ? { ...m, position: { x: node.position.x, y: node.position.y } }
@@ -543,29 +541,40 @@ export const MapView: React.FC = () => {
         setMarkers(updatedMarkers);
         
         // Update the actual entity coordinates in real-time
+        const newPosition = {
+          x: node.position.x / COORDINATE_SCALE_FACTOR,
+          y: node.position.y / COORDINATE_SCALE_FACTOR,
+        };
+        
         if (marker.type === 'character') {
-          const newPosition = {
-            x: node.position.x / COORDINATE_SCALE_FACTOR, // Convert back from display coordinates
-            y: node.position.y / COORDINATE_SCALE_FACTOR,
-          };
-          console.log(`[MapView] Updating character ${marker.entityId} position to:`, newPosition);
           updateCharacter(marker.entityId, { position: newPosition });
-          
-          // TODO: Send update to backend
-        } else if (marker.type === 'location' && world) {
-          // Update location in world
-          const newPosition = {
-            x: node.position.x / COORDINATE_SCALE_FACTOR,
-            y: node.position.y / COORDINATE_SCALE_FACTOR,
-          };
-          console.log(`[MapView] Updating location ${marker.entityId} position to:`, newPosition);
-          
-          // TODO: Update location coordinates in backend
-          // For now, just log the update
+        } else if (marker.type === 'location') {
+          updateLocation(marker.entityId, { position: newPosition });
         }
       }
     }
-  }, [markers, updateCharacter, world]);
+  }, [markers, updateCharacter, updateLocation, setMarkers]);
+  
+  // Handle when a marker node drag is complete
+  const handleNodeDragStop = useCallback((_event: any, node: Node) => {
+    // Check if this is a marker node
+    if (node.id.startsWith('marker-')) {
+      const marker = markers.find(m => `marker-${m.id}` === node.id);
+      if (marker) {
+        console.log(`[MapView] Marker ${marker.name} drag complete at:`, node.position);
+        
+        // Final position update already handled by handleNodeDrag
+        // This is just for logging/confirmation
+        const finalPosition = {
+          x: node.position.x / COORDINATE_SCALE_FACTOR,
+          y: node.position.y / COORDINATE_SCALE_FACTOR,
+        };
+        console.log(`[MapView] Final position for ${marker.type} ${marker.entityId}:`, finalPosition);
+        
+        // TODO: Send update to backend
+      }
+    }
+  }, [markers]);
   
   // Update nodes when characters or locations change
   React.useEffect(() => {
@@ -803,6 +812,7 @@ export const MapView: React.FC = () => {
         edges={[]}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeDrag={handleNodeDrag}
         onNodeDragStop={handleNodeDragStop}
         onInit={setReactFlowInstance}
         nodeTypes={nodeTypes}
