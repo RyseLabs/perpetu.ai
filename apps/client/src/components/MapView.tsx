@@ -332,19 +332,21 @@ const MapViewInner: React.FC = () => {
     
     // Handle marker nodes (individual characters or locations)
     if (node.type === 'marker') {
-      const { type, entityId } = node.data as any;
-      if (type && entityId) {
-        if (type === 'character') {
+      const { type } = node.data as any;
+      
+      // Update mouse coordinates display during drag
+      setMouseCoords({ 
+        x: parseFloat(newPosition.x.toFixed(1)), 
+        y: parseFloat(newPosition.y.toFixed(1)) 
+      });
+      
+      // Only update character positions in real-time during drag
+      // Location positions will be updated on drag stop to avoid re-render conflicts
+      if (type === 'character') {
+        const { entityId } = node.data as any;
+        if (entityId) {
           updateCharacter(entityId, { position: newPosition });
-        } else if (type === 'location') {
-          updateLocation(entityId, { position: newPosition });
         }
-        
-        // Update mouse coordinates display during drag
-        setMouseCoords({ 
-          x: parseFloat(newPosition.x.toFixed(1)), 
-          y: parseFloat(newPosition.y.toFixed(1)) 
-        });
       }
     }
     // Handle character group nodes - only update mouse coords, not positions
@@ -370,6 +372,11 @@ const MapViewInner: React.FC = () => {
       };
       console.log(`[MapView] Final position for ${type} ${entityId}:`, finalPosition);
       
+      // Update location positions on drag stop (deferred to avoid re-render conflicts)
+      if (type === 'location' && entityId) {
+        updateLocation(entityId, { position: finalPosition });
+      }
+      
       // TODO: Send update to backend
     } else if (node.type === 'characterGroup') {
       const { characters } = node.data as any;
@@ -390,7 +397,7 @@ const MapViewInner: React.FC = () => {
       
       // TODO: Send update to backend
     }
-  }, [updateCharacter]);
+  }, [updateCharacter, updateLocation]);
   
   // Update nodes when characters or locations change
   React.useEffect(() => {
