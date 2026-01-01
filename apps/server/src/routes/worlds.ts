@@ -280,6 +280,121 @@ export const worldRoutes: FastifyPluginAsync = async (fastify) => {
   });
   
   /**
+   * PUT /api/worlds/:worldId/characters/:characterId
+   * Update a character
+   */
+  fastify.put<{
+    Params: { worldId: string; characterId: string };
+    Body: Partial<import('@perpetu-ai/models').Character>;
+  }>('/:worldId/characters/:characterId', async (request, reply) => {
+    try {
+      const { worldId, characterId } = request.params;
+      const updates = request.body;
+      
+      await fileStorage.updateCharacter(worldId, characterId, updates);
+      const character = await fileStorage.getCharacter(worldId, characterId);
+      
+      return reply.send({
+        success: true,
+        character,
+      });
+    } catch (error) {
+      console.error('Update character error:', error);
+      return reply.code(500).send({
+        error: 'Failed to update character',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+  
+  /**
+   * DELETE /api/worlds/:worldId/characters/:characterId
+   * Delete a character
+   */
+  fastify.delete<{
+    Params: { worldId: string; characterId: string };
+  }>('/:worldId/characters/:characterId', async (request, reply) => {
+    try {
+      const { worldId, characterId } = request.params;
+      
+      const character = await fileStorage.getCharacter(worldId, characterId);
+      if (!character) {
+        return reply.code(404).send({
+          error: 'Character not found',
+        });
+      }
+      
+      await worldBuilderService.deleteCharacter(worldId, characterId);
+      
+      return reply.send({
+        success: true,
+        message: `Character ${characterId} deleted successfully`,
+      });
+    } catch (error) {
+      console.error('Delete character error:', error);
+      return reply.code(500).send({
+        error: 'Failed to delete character',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+  
+  /**
+   * PUT /api/worlds/:worldId/locations/:locationId
+   * Update a location
+   */
+  fastify.put<{
+    Params: { worldId: string; locationId: string };
+    Body: Partial<import('@perpetu-ai/models').Location>;
+  }>('/:worldId/locations/:locationId', async (request, reply) => {
+    try {
+      const { worldId, locationId } = request.params;
+      const updates = request.body;
+      
+      await worldBuilderService.updateLocation(worldId, locationId, updates);
+      
+      const world = await fileStorage.getWorld(worldId);
+      const location = world?.map.locations.find(l => l.id === locationId);
+      
+      return reply.send({
+        success: true,
+        location,
+      });
+    } catch (error) {
+      console.error('Update location error:', error);
+      return reply.code(500).send({
+        error: 'Failed to update location',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+  
+  /**
+   * DELETE /api/worlds/:worldId/locations/:locationId
+   * Delete a location
+   */
+  fastify.delete<{
+    Params: { worldId: string; locationId: string };
+  }>('/:worldId/locations/:locationId', async (request, reply) => {
+    try {
+      const { worldId, locationId } = request.params;
+      
+      await worldBuilderService.deleteLocation(worldId, locationId);
+      
+      return reply.send({
+        success: true,
+        message: `Location ${locationId} deleted successfully`,
+      });
+    } catch (error) {
+      console.error('Delete location error:', error);
+      return reply.code(500).send({
+        error: 'Failed to delete location',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  /**
    * DELETE /api/worlds/:worldId
    * Delete a world and all its data
    */
