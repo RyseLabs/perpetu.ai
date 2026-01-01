@@ -255,24 +255,37 @@ const MapViewInner: React.FC = () => {
   // Handle node clicks to select entities
   const handleNodeClick = useCallback((_event: any, node: Node) => {
     console.log('[MapView] Node clicked:', node);
+    console.log('[MapView] Node type:', node.type);
+    console.log('[MapView] Node data:', node.data);
     
     // All location and character nodes now use 'marker' type with entityId in data
     if (node.type === 'marker') {
       const { type, entityId } = node.data as any;
+      console.log('[MapView] Marker type:', type, 'entityId:', entityId);
       
       if (type === 'character') {
+        console.log('[MapView] Looking for character in:', characters.length, 'characters');
         const char = characters.find(c => c.id === entityId);
+        console.log('[MapView] Found character:', char);
         if (char) {
+          console.log('[MapView] Calling setSelectedCharacter with:', char.name);
           setSelectedCharacter(char);
           setSelectedLocation(null);
           console.log('[MapView] Selected character:', char);
+        } else {
+          console.warn('[MapView] Character not found with id:', entityId);
         }
       } else if (type === 'location') {
+        console.log('[MapView] Looking for location in world map');
         const loc = world?.map?.locations?.find(l => l.id === entityId);
+        console.log('[MapView] Found location:', loc);
         if (loc) {
+          console.log('[MapView] Calling setSelectedLocation with:', loc.name);
           setSelectedLocation(loc);
           setSelectedCharacter(null);
           console.log('[MapView] Selected location:', loc);
+        } else {
+          console.warn('[MapView] Location not found with id:', entityId);
         }
       }
     }
