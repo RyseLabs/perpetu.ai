@@ -47,15 +47,6 @@ export const SidebarPanel: React.FC = () => {
   
   return (
     <div className="h-full bg-panel-bg border-r border-panel-border flex flex-col relative">
-      {/* Add Button */}
-      <button
-        onClick={() => setIsAddModalOpen(true)}
-        className="absolute top-2 right-2 z-10 w-8 h-8 bg-accent text-white rounded-full flex items-center justify-center text-xl font-bold hover:bg-accent-dark transition-colors shadow-lg"
-        title="Add new character or location"
-      >
-        +
-      </button>
-      
       {/* Add Object Modal */}
       <AddObjectModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
       
@@ -94,7 +85,17 @@ export const SidebarPanel: React.FC = () => {
       </div>
       
       {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 relative">
+        {/* Add Button - positioned at bottom right of tab content viewport */}
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="fixed bottom-4 right-4 z-10 w-12 h-12 bg-accent text-white rounded-full flex items-center justify-center text-2xl font-bold hover:bg-accent-dark transition-colors shadow-lg hover:scale-110"
+          title="Add new character or location"
+          style={{ position: 'absolute' }}
+        >
+          +
+        </button>
+        
         {activeTab === 'party' && (
           <div>
             {partyMembers.length === 0 ? (
