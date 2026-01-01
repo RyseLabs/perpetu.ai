@@ -347,23 +347,16 @@ const MapViewInner: React.FC = () => {
         });
       }
     }
-    // Handle character group nodes - update all characters in the group
+    // Handle character group nodes - only update mouse coords, not positions
+    // Positions will be updated on drag stop to avoid conflicts with re-renders
     else if (node.type === 'characterGroup') {
-      const { characters } = node.data as any;
-      if (characters && Array.isArray(characters)) {
-        // Update all characters in the group to the new position
-        characters.forEach((char: any) => {
-          updateCharacter(char.id, { position: newPosition });
-        });
-        
-        // Update mouse coordinates display during drag
-        setMouseCoords({ 
-          x: parseFloat(newPosition.x.toFixed(1)), 
-          y: parseFloat(newPosition.y.toFixed(1)) 
-        });
-      }
+      // Update mouse coordinates display during drag
+      setMouseCoords({ 
+        x: parseFloat(newPosition.x.toFixed(1)), 
+        y: parseFloat(newPosition.y.toFixed(1)) 
+      });
     }
-  }, [updateCharacter, updateLocation, world]);
+  }, [updateCharacter, updateLocation, world, setMouseCoords]);
   
   // Handle when a node drag is complete
   const handleNodeDragStop = useCallback((_event: any, node: Node) => {
@@ -388,9 +381,16 @@ const MapViewInner: React.FC = () => {
       };
       console.log(`[MapView] Final position for group (${characters?.length} characters):`, finalPosition);
       
+      // Update all characters in the group to the final position
+      if (characters && Array.isArray(characters)) {
+        characters.forEach((char: any) => {
+          updateCharacter(char.id, { position: finalPosition });
+        });
+      }
+      
       // TODO: Send update to backend
     }
-  }, []);
+  }, [updateCharacter]);
   
   // Update nodes when characters or locations change
   React.useEffect(() => {
