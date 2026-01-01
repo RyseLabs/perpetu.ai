@@ -470,7 +470,7 @@ const nodeTypes: NodeTypes = {
  * Map view component with draggable, zoomable world map
  */
 export const MapView: React.FC = () => {
-  const { world, characters, updateCharacter, updateLocation } = useGameStore();
+  const { world, characters, updateCharacter, updateLocation, setSelectedCharacter, setSelectedLocation } = useGameStore();
   const [markers, setMarkers] = useState<Array<{
     id: string;
     type: 'character' | 'location';
@@ -538,6 +538,42 @@ export const MapView: React.FC = () => {
       return distance <= LOCATION_RADIUS;
     });
   };
+  
+  // Handle node clicks to select entities
+  const handleNodeClick = useCallback((_event: any, node: Node) => {
+    console.log('[MapView] Node clicked:', node);
+    
+    // Handle location node clicks
+    if (node.id.startsWith('loc-')) {
+      const location = (node.data as any)?.location;
+      if (location) {
+        setSelectedLocation(location);
+        setSelectedCharacter(null);
+        console.log('[MapView] Selected location:', location);
+      }
+    }
+    
+    // Handle character node clicks
+    if (node.id.startsWith('char-') || node.id.startsWith('group-')) {
+      const character = (node.data as any)?.character;
+      const characters = (node.data as any)?.characters;
+      if (character) {
+        setSelectedCharacter(character);
+        setSelectedLocation(null);
+        console.log('[MapView] Selected character:', character);
+      } else if (characters && characters.length > 0) {
+        // For group nodes, select the first character
+        setSelectedCharacter(characters[0]);
+        setSelectedLocation(null);
+        console.log('[MapView] Selected character from group:', characters[0]);
+      }
+    }
+    
+    // Handle marker node clicks (these handle their own selection in the MarkerNode component)
+    if (node.id.startsWith('marker-')) {
+      console.log('[MapView] Marker clicked, selection handled by MarkerNode component');
+    }
+  }, [setSelectedLocation, setSelectedCharacter]);
   
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [, , onEdgesChange] = useEdgesState([]);
@@ -655,6 +691,7 @@ export const MapView: React.FC = () => {
         type: 'location',
         position: { x: location.position.x * COORDINATE_SCALE_FACTOR, y: location.position.y * COORDINATE_SCALE_FACTOR },
         data: { location },
+        draggable: false,
       }));
     
     // Step 2: Find characters at locations (these won't get separate pins)
@@ -680,6 +717,7 @@ export const MapView: React.FC = () => {
           type: 'character',
           position: { x: char.position.x * COORDINATE_SCALE_FACTOR, y: char.position.y * COORDINATE_SCALE_FACTOR },
           data: { character: char },
+          draggable: false,
         };
       } else {
         // Group node
@@ -689,6 +727,7 @@ export const MapView: React.FC = () => {
           type: 'characterGroup',
           position: { x: x * COORDINATE_SCALE_FACTOR, y: y * COORDINATE_SCALE_FACTOR },
           data: { characters: chars },
+          draggable: false,
         };
       }
     });
@@ -833,6 +872,7 @@ export const MapView: React.FC = () => {
         edges={[]}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeClick={handleNodeClick}
         onNodeDrag={handleNodeDrag}
         onNodeDragStop={handleNodeDragStop}
         onInit={setReactFlowInstance}
