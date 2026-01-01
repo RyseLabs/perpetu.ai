@@ -644,13 +644,18 @@ export const MapView: React.FC = () => {
       return true;
     });
     
-    // Step 1: Create location nodes
-    const locationNodes: Node[] = validLocations.map((location) => ({
-      id: `loc-${location.id}`,
-      type: 'location',
-      position: { x: location.position.x * COORDINATE_SCALE_FACTOR, y: location.position.y * COORDINATE_SCALE_FACTOR },
-      data: { location },
-    }));
+    // Get set of entity IDs that have markers
+    const markerEntityIds = new Set(markers.map(m => m.entityId));
+    
+    // Step 1: Create location nodes (only for locations WITHOUT markers)
+    const locationNodes: Node[] = validLocations
+      .filter(location => !markerEntityIds.has(location.id))
+      .map((location) => ({
+        id: `loc-${location.id}`,
+        type: 'location',
+        position: { x: location.position.x * COORDINATE_SCALE_FACTOR, y: location.position.y * COORDINATE_SCALE_FACTOR },
+        data: { location },
+      }));
     
     // Step 2: Find characters at locations (these won't get separate pins)
     const charactersAtLocations = new Set<string>();
@@ -659,9 +664,9 @@ export const MapView: React.FC = () => {
       charsHere.forEach(char => charactersAtLocations.add(char.id));
     });
     
-    // Step 3: Group remaining characters by position
+    // Step 3: Group remaining characters by position (only those WITHOUT markers)
     const ungroupedCharacters = validCharacters.filter(
-      char => !charactersAtLocations.has(char.id)
+      char => !charactersAtLocations.has(char.id) && !markerEntityIds.has(char.id)
     );
     const characterGroups = groupCharactersByPosition(ungroupedCharacters);
     
@@ -688,7 +693,7 @@ export const MapView: React.FC = () => {
       }
     });
     
-    // Step 5: Create marker nodes
+    // Step 5: Create marker nodes (these replace the default location/character nodes)
     const markerNodes: Node[] = markers.map(marker => ({
       id: `marker-${marker.id}`,
       type: 'marker',
