@@ -43,34 +43,35 @@ function App() {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - Sidebar with tabs and info */}
         <div className="w-80 flex-shrink-0 flex flex-col overflow-hidden">
-          {/* Top Half - Tabs (Party/NPCs/Locations) */}
+          {/*  Tabs (Party/NPCs/Locations) */}
           <div className="flex-1 overflow-hidden">
             <ErrorBoundary>
-              <SidebarPanel />
+              <SidebarPanel/>
             </ErrorBoundary>
           </div>
           
-          {/* Bottom Half - Info Panel */}
+        </div>
+        <div className="w-80 flex-shrink-0 flex flex-col overflow-hidden">
+          {/*  Info Panel */}
           <div className="flex-1 overflow-hidden border-t-2 border-panel-border">
             <ErrorBoundary>
-              <InfoPanel />
+              <InfoPanel/>
             </ErrorBoundary>
           </div>
         </div>
-        
         {/* Center Panel - Map & Chat */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Map (top 50%) */}
           <div className="flex-1 overflow-hidden">
             <ErrorBoundary>
-              <MapView />
+              <MapView/>
             </ErrorBoundary>
           </div>
-          
+
           {/* Chat (bottom 50%) */}
           <div className="flex-1 overflow-hidden">
             <ErrorBoundary>
-              <ChatPanel />
+              <ChatPanel/>
             </ErrorBoundary>
           </div>
         </div>

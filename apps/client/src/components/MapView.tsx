@@ -180,7 +180,10 @@ const LocationNode: React.FC<{ data: any }> = ({ data }) => {
   
   return (
     <div
-      onClick={() => setSelectedLocation(location)}
+      onClick={() => {
+        setSelectedLocation(location);
+        console.log(location)
+      }}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
       className="cursor-pointer relative"
@@ -222,6 +225,7 @@ const MarkerNode: React.FC<{ data: any }> = ({ data }) => {
     } else if (type === 'location') {
       const loc = world?.map?.locations?.find(l => l.id === entityId);
       if (loc) {
+        console.log(loc)
         setSelectedLocation(loc);
         setSelectedCharacter(null);
       }
