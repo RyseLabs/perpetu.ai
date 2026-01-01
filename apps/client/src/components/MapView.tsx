@@ -307,38 +307,54 @@ const MapViewInner: React.FC = () => {
   
   // Handle when a node is being dragged - update coordinates in real-time
   const handleNodeDrag = useCallback((_event: any, node: Node) => {
-    // All draggable nodes are now marker type with entityId
+    // Get map dimensions
+    const mapWidth = world?.map?.width || DEFAULT_MAP_SIZE;
+    const mapHeight = world?.map?.height || DEFAULT_MAP_SIZE;
+    
+    // Constrain node position to map bounds (in display coordinates)
+    const maxX = mapWidth * COORDINATE_SCALE_FACTOR;
+    const maxY = mapHeight * COORDINATE_SCALE_FACTOR;
+    
+    const constrainedX = Math.max(0, Math.min(node.position.x, maxX));
+    const constrainedY = Math.max(0, Math.min(node.position.y, maxY));
+    
+    // If position was constrained, update the node position
+    if (constrainedX !== node.position.x || constrainedY !== node.position.y) {
+      node.position.x = constrainedX;
+      node.position.y = constrainedY;
+    }
+    
+    // Convert display coordinates back to game coordinates
+    const newPosition = {
+      x: constrainedX / COORDINATE_SCALE_FACTOR,
+      y: constrainedY / COORDINATE_SCALE_FACTOR,
+    };
+    
+    // Handle marker nodes (individual characters or locations)
     if (node.type === 'marker') {
       const { type, entityId } = node.data as any;
       if (type && entityId) {
-        // Get map dimensions
-        const mapWidth = world?.map?.width || DEFAULT_MAP_SIZE;
-        const mapHeight = world?.map?.height || DEFAULT_MAP_SIZE;
-        
-        // Constrain node position to map bounds (in display coordinates)
-        const maxX = mapWidth * COORDINATE_SCALE_FACTOR;
-        const maxY = mapHeight * COORDINATE_SCALE_FACTOR;
-        
-        const constrainedX = Math.max(0, Math.min(node.position.x, maxX));
-        const constrainedY = Math.max(0, Math.min(node.position.y, maxY));
-        
-        // If position was constrained, update the node position
-        if (constrainedX !== node.position.x || constrainedY !== node.position.y) {
-          node.position.x = constrainedX;
-          node.position.y = constrainedY;
-        }
-        
-        // Convert display coordinates back to game coordinates
-        const newPosition = {
-          x: constrainedX / COORDINATE_SCALE_FACTOR,
-          y: constrainedY / COORDINATE_SCALE_FACTOR,
-        };
-        
         if (type === 'character') {
           updateCharacter(entityId, { position: newPosition });
         } else if (type === 'location') {
           updateLocation(entityId, { position: newPosition });
         }
+        
+        // Update mouse coordinates display during drag
+        setMouseCoords({ 
+          x: parseFloat(newPosition.x.toFixed(1)), 
+          y: parseFloat(newPosition.y.toFixed(1)) 
+        });
+      }
+    }
+    // Handle character group nodes - update all characters in the group
+    else if (node.type === 'characterGroup') {
+      const { characters } = node.data as any;
+      if (characters && Array.isArray(characters)) {
+        // Update all characters in the group to the new position
+        characters.forEach((char: any) => {
+          updateCharacter(char.id, { position: newPosition });
+        });
         
         // Update mouse coordinates display during drag
         setMouseCoords({ 
@@ -360,6 +376,17 @@ const MapViewInner: React.FC = () => {
         y: node.position.y / COORDINATE_SCALE_FACTOR,
       };
       console.log(`[MapView] Final position for ${type} ${entityId}:`, finalPosition);
+      
+      // TODO: Send update to backend
+    } else if (node.type === 'characterGroup') {
+      const { characters } = node.data as any;
+      console.log(`[MapView] Character group drag complete at:`, node.position);
+      
+      const finalPosition = {
+        x: node.position.x / COORDINATE_SCALE_FACTOR,
+        y: node.position.y / COORDINATE_SCALE_FACTOR,
+      };
+      console.log(`[MapView] Final position for group (${characters?.length} characters):`, finalPosition);
       
       // TODO: Send update to backend
     }
@@ -470,7 +497,7 @@ const MapViewInner: React.FC = () => {
           type: 'characterGroup',
           position: { x: x * COORDINATE_SCALE_FACTOR, y: y * COORDINATE_SCALE_FACTOR },
           data: { characters: chars },
-          draggable: false,
+          draggable: true,
         });
       }
     });
