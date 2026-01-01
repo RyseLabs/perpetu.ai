@@ -107,53 +107,55 @@ const CharacterNode: React.FC<{ data: any }> = ({ data }) => {
   
   // Safe access with fallbacks
   const name = character?.name || 'Unknown';
-  const tier = character?.advancementTier || 'Unknown';
   const isDiscovered = character?.discoveredByPlayer || false;
   const isPlayer = character?.isPlayerCharacter || false;
   const isInParty = character?.isInPlayerParty || false;
   const avatarUrl = character?.avatarUrl;
   
   return (
-    <div className="relative" style={zoomTransform}>
-      {/* Avatar overlay - positioned above the main node */}
-      {avatarUrl && (
-        <div
-          style={{
-            position: 'absolute',
-            top: -40,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 10,
-          }}
-        >
+    <div
+      onClick={() => setSelectedCharacter(character)}
+      className="cursor-pointer relative flex flex-col items-center"
+      style={zoomTransform}
+    >
+      {/* Unified element: avatar, name, and marker pin */}
+      <div className="flex flex-col items-center">
+        {/* Avatar with border */}
+        {avatarUrl ? (
           <img 
             src={avatarUrl}
             alt={name}
-            className="w-10 h-10 rounded-full border-2 object-cover shadow-md"
+            className="w-12 h-12 rounded-full border-3 object-cover shadow-lg mb-1"
             style={{
               borderColor: isInParty ? '#6366f1' : isPlayer ? '#10b981' : '#fbbf24',
+              borderWidth: '3px',
             }}
           />
-        </div>
-      )}
-      
-      {/* Character node */}
-      <div
-        onClick={() => setSelectedCharacter(character)}
-        className="cursor-pointer bg-panel-bg border-2 border-accent rounded-lg p-2 min-w-[100px] hover:bg-panel-border transition-colors shadow-lg"
-        style={{
-          borderColor: isInParty ? '#6366f1' : isPlayer ? '#10b981' : '#2a2a2a',
-        }}
-      >
-        <div className="text-xs font-bold truncate">
-          {isDiscovered ? name : 'Unknown'}
-        </div>
-        <div className="text-xs text-text-secondary">
-          {tier}
-        </div>
-        {isPlayer && (
-          <div className="text-xs text-green-400 font-bold">★ You</div>
+        ) : (
+          <div 
+            className="w-12 h-12 rounded-full border-3 flex items-center justify-center shadow-lg mb-1 bg-panel-bg"
+            style={{
+              borderColor: isInParty ? '#6366f1' : isPlayer ? '#10b981' : '#fbbf24',
+              borderWidth: '3px',
+            }}
+          >
+            <span className="text-xl">👤</span>
+          </div>
         )}
+        
+        {/* Name label directly below avatar */}
+        <div className="bg-panel-bg border-2 border-accent rounded px-2 py-1 shadow-md hover:bg-panel-border transition-colors"
+          style={{
+            borderColor: isInParty ? '#6366f1' : isPlayer ? '#10b981' : '#fbbf24',
+          }}
+        >
+          <div className="text-xs font-bold text-center whitespace-nowrap">
+            {isDiscovered ? name : 'Unknown'}
+          </div>
+          {isPlayer && (
+            <div className="text-xs text-green-400 font-bold text-center">★</div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -163,21 +165,9 @@ const CharacterNode: React.FC<{ data: any }> = ({ data }) => {
  * Custom node component for locations on the map
  */
 const LocationNode: React.FC<{ data: any }> = ({ data }) => {
-  const { setSelectedLocation, characters } = useGameStore();
+  const { setSelectedLocation } = useGameStore();
   const location: Location = data.location;
-  const [showTooltip, setShowTooltip] = useState(false);
   const zoomTransform = useZoomTransform();
-  
-  // Calculate distance from player
-  const playerCharacter = characters.find(c => c.isPlayerCharacter);
-  const distance = playerCharacter && playerCharacter.position
-    ? calculateDistance(
-        playerCharacter.position.x,
-        playerCharacter.position.y,
-        location.position.x,
-        location.position.y
-      ).toFixed(1)
-    : 'N/A';
   
   const locationTypeColors: Record<string, string> = {
     city: '#fbbf24',
@@ -206,27 +196,24 @@ const LocationNode: React.FC<{ data: any }> = ({ data }) => {
         setSelectedLocation(location);
         console.log(location)
       }}
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-      className="cursor-pointer relative"
+      className="cursor-pointer relative flex flex-col items-center"
       style={zoomTransform}
     >
-      <div
-        className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition-transform"
-        style={{ backgroundColor: locationTypeColors[locationType] || '#6b7280' }}
-      >
-        <span className="text-lg">{locationTypeIcons[locationType] || '📍'}</span>
-      </div>
-      
-      {showTooltip && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-panel-bg border border-panel-border rounded-lg p-2 shadow-xl z-50 whitespace-nowrap">
-          <div className="text-xs font-bold text-accent">{locationName}</div>
-          <div className="text-xs text-text-secondary capitalize">{locationType}</div>
-          {playerCharacter && playerCharacter.position && (
-            <div className="text-xs text-text-secondary">Distance: {distance} units</div>
-          )}
+      {/* Unified element: icon and name */}
+      <div className="flex flex-col items-center">
+        {/* Location icon */}
+        <div
+          className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition-transform mb-1"
+          style={{ backgroundColor: locationTypeColors[locationType] || '#6b7280' }}
+        >
+          <span className="text-xl">{locationTypeIcons[locationType] || '📍'}</span>
         </div>
-      )}
+        
+        {/* Name label directly below icon */}
+        <div className="bg-panel-bg border border-panel-border rounded px-2 py-1 shadow-md hover:bg-opacity-80 transition-colors">
+          <div className="text-xs font-bold text-accent text-center whitespace-nowrap">{locationName}</div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -238,6 +225,13 @@ const MarkerNode: React.FC<{ data: any }> = ({ data }) => {
   const { setSelectedCharacter, setSelectedLocation, characters, world } = useGameStore();
   const { type, entityId, name } = data;
   const zoomTransform = useZoomTransform();
+  
+  // Get the entity to show its image
+  const entity = type === 'character' 
+    ? characters.find(c => c.id === entityId)
+    : world?.map?.locations?.find(l => l.id === entityId);
+  
+  const avatarUrl = type === 'character' ? (entity as any)?.avatarUrl : null;
   
   const handleClick = () => {
     if (type === 'character') {
@@ -259,14 +253,34 @@ const MarkerNode: React.FC<{ data: any }> = ({ data }) => {
   return (
     <div
       onClick={handleClick}
-      className="cursor-pointer bg-accent text-white rounded-full p-2 shadow-lg hover:scale-110 transition-transform"
-      title={name}
+      className="cursor-pointer relative flex flex-col items-center"
       style={zoomTransform}
     >
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
+      {/* Unified element: image/icon, name, and marker pin */}
+      <div className="flex flex-col items-center">
+        {/* Image or icon with pin background */}
+        <div className="relative">
+          {avatarUrl ? (
+            <img 
+              src={avatarUrl}
+              alt={name}
+              className="w-10 h-10 rounded-full border-2 border-accent object-cover shadow-lg"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center border-2 border-white shadow-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+          )}
+        </div>
+        
+        {/* Name label directly below */}
+        <div className="bg-accent text-white border border-white rounded px-2 py-1 shadow-md hover:bg-opacity-90 transition-colors mt-1">
+          <div className="text-xs font-bold text-center whitespace-nowrap">{name}</div>
+        </div>
+      </div>
     </div>
   );
 };
