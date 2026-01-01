@@ -439,6 +439,47 @@ export const MapView: React.FC = () => {
     setNodes([...backgroundNodes, ...locationMarkerNodes, ...characterMarkerNodes, ...characterGroupNodes]);
   }, [characters, world, setNodes]);
   
+  // Handle drag over
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+  
+  // Handle drop from side panel
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      const { type, id, name } = data;
+      
+      // Get the ReactFlow bounds and calculate drop position
+      const reactFlowBounds = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const x = e.clientX - reactFlowBounds.left;
+      const y = e.clientY - reactFlowBounds.top;
+      
+      // Convert to game coordinates
+      const gameX = x / COORDINATE_SCALE_FACTOR;
+      const gameY = y / COORDINATE_SCALE_FACTOR;
+      
+      // Update the entity's position based on type
+      if (type === 'character') {
+        const char = characters.find(c => c.id === id);
+        if (char) {
+          updateCharacter(id, { position: { x: gameX, y: gameY } });
+          console.log(`[MapView] Dropped character ${name} at (${gameX.toFixed(1)}, ${gameY.toFixed(1)})`);
+        }
+      } else if (type === 'location') {
+        const loc = world?.map?.locations?.find(l => l.id === id);
+        if (loc) {
+          updateLocation(id, { position: { x: gameX, y: gameY } });
+          console.log(`[MapView] Dropped location ${name} at (${gameX.toFixed(1)}, ${gameY.toFixed(1)})`);
+        }
+      }
+    } catch (error) {
+      console.error('Error handling drop:', error);
+    }
+  };
+  
   if (!world) {
     return (
       <div className="h-full bg-game-bg flex items-center justify-center">
@@ -463,6 +504,8 @@ export const MapView: React.FC = () => {
   return (
     <div 
       className="h-full bg-game-bg relative"
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
       onMouseMove={(e) => {
         const reactFlowBounds = (e.currentTarget as HTMLElement).getBoundingClientRect();
         const x = ((e.clientX - reactFlowBounds.left) / COORDINATE_SCALE_FACTOR).toFixed(1);
