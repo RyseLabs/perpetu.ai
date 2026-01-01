@@ -217,8 +217,8 @@ const LocationNode: React.FC<{ data: any }> = ({ data }) => {
  * Custom node component for dropped markers on the map
  */
 const MarkerNode: React.FC<{ data: any }> = ({ data }) => {
-  const { setSelectedCharacter, setSelectedLocation, characters, world } = useGameStore();
   const { type, entityId, name } = data;
+  const { characters, world } = useGameStore();
   const zoomTransform = useZoomTransform();
   
   // Get the entity to show its image
@@ -228,26 +228,8 @@ const MarkerNode: React.FC<{ data: any }> = ({ data }) => {
   
   const avatarUrl = type === 'character' ? (entity as any)?.avatarUrl : null;
   
-  const handleClick = () => {
-    if (type === 'character') {
-      const char = characters.find(c => c.id === entityId);
-      if (char) {
-        setSelectedCharacter(char);
-        setSelectedLocation(null);
-      }
-    } else if (type === 'location') {
-      const loc = world?.map?.locations?.find(l => l.id === entityId);
-      if (loc) {
-        console.log(loc)
-        setSelectedLocation(loc);
-        setSelectedCharacter(null);
-      }
-    }
-  };
-  
   return (
     <div
-      onClick={handleClick}
       className="cursor-pointer relative flex flex-col items-center"
       style={zoomTransform}
     >
@@ -562,11 +544,28 @@ export const MapView: React.FC = () => {
       }
     }
     
-    // Handle marker node clicks (these handle their own selection in the MarkerNode component)
+    // Handle marker node clicks
     if (node.id.startsWith('marker-')) {
-      console.log('[MapView] Marker clicked, selection handled by MarkerNode component');
+      const marker = (node.data as any);
+      const { type, entityId } = marker;
+      
+      if (type === 'character') {
+        const char = characters.find(c => c.id === entityId);
+        if (char) {
+          setSelectedCharacter(char);
+          setSelectedLocation(null);
+          console.log('[MapView] Selected character from marker:', char);
+        }
+      } else if (type === 'location') {
+        const loc = world?.map?.locations?.find(l => l.id === entityId);
+        if (loc) {
+          setSelectedLocation(loc);
+          setSelectedCharacter(null);
+          console.log('[MapView] Selected location from marker:', loc);
+        }
+      }
     }
-  }, [setSelectedLocation, setSelectedCharacter]);
+  }, [setSelectedLocation, setSelectedCharacter, characters, world]);
   
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [, , onEdgesChange] = useEdgesState([]);
