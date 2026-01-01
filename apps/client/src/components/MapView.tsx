@@ -19,6 +19,12 @@ function calculateDistance(x1: number, y1: number, x2: number, y2: number): numb
   return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
 }
 
+// Map configuration constants
+const DEFAULT_MAP_SIZE = 100; // Default map dimensions in units
+const COORDINATE_SCALE_FACTOR = 100; // Scale factor for converting game coordinates to display pixels
+const MAP_IMAGE_OPACITY = 0.4; // Background image opacity
+const MAP_IMAGE_FILTER = 'sepia(20%) contrast(90%)'; // Filter applied to background image
+
 /**
  * Custom node component for grouped characters on the map
  */
@@ -386,9 +392,18 @@ const AddMarkerModal: React.FC<AddMarkerModalProps> = ({
 };
 
 /**
+ * Background image node data type
+ */
+interface BackgroundImageData {
+  imageUrl: string;
+  width: number;
+  height: number;
+}
+
+/**
  * Custom node component for background map image
  */
-const BackgroundImageNode: React.FC<{ data: any }> = ({ data }) => {
+const BackgroundImageNode: React.FC<{ data: BackgroundImageData }> = ({ data }) => {
   const { imageUrl, width, height } = data;
   
   return (
@@ -400,8 +415,8 @@ const BackgroundImageNode: React.FC<{ data: any }> = ({ data }) => {
         backgroundSize: 'contain',
         backgroundRepeat: 'no-repeat',
         backgroundPosition: 'center',
-        opacity: 0.4,
-        filter: 'sepia(20%) contrast(90%)',
+        opacity: MAP_IMAGE_OPACITY,
+        filter: MAP_IMAGE_FILTER,
         pointerEvents: 'none',
       }}
     />
@@ -511,8 +526,8 @@ export const MapView: React.FC = () => {
         // Update the actual entity coordinates in real-time
         if (marker.type === 'character') {
           const newPosition = {
-            x: node.position.x / 100, // Convert back from display coordinates
-            y: node.position.y / 100,
+            x: node.position.x / COORDINATE_SCALE_FACTOR, // Convert back from display coordinates
+            y: node.position.y / COORDINATE_SCALE_FACTOR,
           };
           console.log(`[MapView] Updating character ${marker.entityId} position to:`, newPosition);
           updateCharacter(marker.entityId, { position: newPosition });
@@ -521,8 +536,8 @@ export const MapView: React.FC = () => {
         } else if (marker.type === 'location' && world) {
           // Update location in world
           const newPosition = {
-            x: node.position.x / 100,
-            y: node.position.y / 100,
+            x: node.position.x / COORDINATE_SCALE_FACTOR,
+            y: node.position.y / COORDINATE_SCALE_FACTOR,
           };
           console.log(`[MapView] Updating location ${marker.entityId} position to:`, newPosition);
           
@@ -544,8 +559,8 @@ export const MapView: React.FC = () => {
     const backgroundNodes: Node[] = [];
     if (world.map.backgroundImageUrl) {
       // Use map dimensions or default to a large size
-      const mapWidth = (world.map.width || 100) * 100;
-      const mapHeight = (world.map.height || 100) * 100;
+      const mapWidth = (world.map.width || DEFAULT_MAP_SIZE) * COORDINATE_SCALE_FACTOR;
+      const mapHeight = (world.map.height || DEFAULT_MAP_SIZE) * COORDINATE_SCALE_FACTOR;
       
       backgroundNodes.push({
         id: 'background-image',
@@ -589,7 +604,7 @@ export const MapView: React.FC = () => {
     const locationNodes: Node[] = validLocations.map((location) => ({
       id: `loc-${location.id}`,
       type: 'location',
-      position: { x: location.position.x * 100, y: location.position.y * 100 },
+      position: { x: location.position.x * COORDINATE_SCALE_FACTOR, y: location.position.y * COORDINATE_SCALE_FACTOR },
       data: { location },
     }));
     
@@ -614,7 +629,7 @@ export const MapView: React.FC = () => {
         return {
           id: `char-${char.id}`,
           type: 'character',
-          position: { x: char.position.x * 100, y: char.position.y * 100 },
+          position: { x: char.position.x * COORDINATE_SCALE_FACTOR, y: char.position.y * COORDINATE_SCALE_FACTOR },
           data: { character: char },
         };
       } else {
@@ -623,7 +638,7 @@ export const MapView: React.FC = () => {
         return {
           id: `group-${key}`,
           type: 'characterGroup',
-          position: { x: x * 100, y: y * 100 },
+          position: { x: x * COORDINATE_SCALE_FACTOR, y: y * COORDINATE_SCALE_FACTOR },
           data: { characters: chars },
         };
       }
@@ -751,8 +766,8 @@ export const MapView: React.FC = () => {
       onDrop={handleDrop}
       onMouseMove={(e) => {
         const reactFlowBounds = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        const x = ((e.clientX - reactFlowBounds.left) / 100).toFixed(1);
-        const y = ((e.clientY - reactFlowBounds.top) / 100).toFixed(1);
+        const x = ((e.clientX - reactFlowBounds.left) / COORDINATE_SCALE_FACTOR).toFixed(1);
+        const y = ((e.clientY - reactFlowBounds.top) / COORDINATE_SCALE_FACTOR).toFixed(1);
         setMouseCoords({ x: parseFloat(x), y: parseFloat(y) });
       }}
       onMouseLeave={() => setMouseCoords(null)}
