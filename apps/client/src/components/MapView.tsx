@@ -311,10 +311,27 @@ const MapViewInner: React.FC = () => {
     if (node.type === 'marker') {
       const { type, entityId } = node.data as any;
       if (type && entityId) {
+        // Get map dimensions
+        const mapWidth = world?.map?.width || DEFAULT_MAP_SIZE;
+        const mapHeight = world?.map?.height || DEFAULT_MAP_SIZE;
+        
+        // Constrain node position to map bounds (in display coordinates)
+        const maxX = mapWidth * COORDINATE_SCALE_FACTOR;
+        const maxY = mapHeight * COORDINATE_SCALE_FACTOR;
+        
+        const constrainedX = Math.max(0, Math.min(node.position.x, maxX));
+        const constrainedY = Math.max(0, Math.min(node.position.y, maxY));
+        
+        // If position was constrained, update the node position
+        if (constrainedX !== node.position.x || constrainedY !== node.position.y) {
+          node.position.x = constrainedX;
+          node.position.y = constrainedY;
+        }
+        
         // Convert display coordinates back to game coordinates
         const newPosition = {
-          x: node.position.x / COORDINATE_SCALE_FACTOR,
-          y: node.position.y / COORDINATE_SCALE_FACTOR,
+          x: constrainedX / COORDINATE_SCALE_FACTOR,
+          y: constrainedY / COORDINATE_SCALE_FACTOR,
         };
         
         if (type === 'character') {
@@ -330,7 +347,7 @@ const MapViewInner: React.FC = () => {
         });
       }
     }
-  }, [updateCharacter, updateLocation]);
+  }, [updateCharacter, updateLocation, world]);
   
   // Handle when a node drag is complete
   const handleNodeDragStop = useCallback((_event: any, node: Node) => {
@@ -557,6 +574,16 @@ const MapViewInner: React.FC = () => {
         style={{ background: '#1a1a1a' }}
         minZoom={0.1}
         maxZoom={2}
+        translateExtent={[
+          [-200, -200],
+          [(world.map.width || DEFAULT_MAP_SIZE) * COORDINATE_SCALE_FACTOR + 200, 
+           (world.map.height || DEFAULT_MAP_SIZE) * COORDINATE_SCALE_FACTOR + 200]
+        ]}
+        nodeExtent={[
+          [0, 0],
+          [(world.map.width || DEFAULT_MAP_SIZE) * COORDINATE_SCALE_FACTOR, 
+           (world.map.height || DEFAULT_MAP_SIZE) * COORDINATE_SCALE_FACTOR]
+        ]}
       >
         <Controls />
         <Background color="#2a2a2a" gap={16} />
