@@ -101,7 +101,6 @@ const CharacterGroupNode: React.FC<{ data: any }> = ({ data }) => {
  * Custom node component for characters on the map
  */
 const CharacterNode: React.FC<{ data: any }> = ({ data }) => {
-  const { setSelectedCharacter } = useGameStore();
   const character = data.character;
   const zoomTransform = useZoomTransform();
   
@@ -114,7 +113,6 @@ const CharacterNode: React.FC<{ data: any }> = ({ data }) => {
   
   return (
     <div
-      onClick={() => setSelectedCharacter(character)}
       className="cursor-pointer relative flex flex-col items-center"
       style={zoomTransform}
     >
@@ -167,7 +165,6 @@ const CharacterNode: React.FC<{ data: any }> = ({ data }) => {
  * Custom node component for locations on the map
  */
 const LocationNode: React.FC<{ data: any }> = ({ data }) => {
-  const { setSelectedLocation } = useGameStore();
   const location: Location = data.location;
   const zoomTransform = useZoomTransform();
   
@@ -194,10 +191,6 @@ const LocationNode: React.FC<{ data: any }> = ({ data }) => {
   
   return (
     <div
-      onClick={() => {
-        setSelectedLocation(location);
-        console.log(location)
-      }}
       className="cursor-pointer relative flex flex-col items-center"
       style={zoomTransform}
     >
