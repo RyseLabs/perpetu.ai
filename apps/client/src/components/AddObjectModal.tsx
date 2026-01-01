@@ -13,7 +13,7 @@ type ObjectType = 'character' | 'location';
  * Modal for adding new characters or locations to the game
  */
 export const AddObjectModal: React.FC<AddObjectModalProps> = ({ isOpen, onClose }) => {
-  const { addCharacter, addLocation } = useGameStore();
+  const { addCharacter, addLocation, world } = useGameStore();
   const [objectType, setObjectType] = useState<ObjectType>('character');
   const [formData, setFormData] = useState<Record<string, any>>({});
 
@@ -23,72 +23,102 @@ export const AddObjectModal: React.FC<AddObjectModalProps> = ({ isOpen, onClose 
     e.preventDefault();
 
     const now = Date.now();
+    const API_BASE = 'http://localhost:3000/api';
 
-    if (objectType === 'character') {
-      // Create new character
-      const newCharacter: Character = {
-        id: `char-${now}-${Math.random().toString(36).substr(2, 9)}`,
-        name: formData.name || 'Unnamed Character',
-        description: formData.description || '',
-        advancementTier: formData.advancementTier || 'Foundation',
-        madraCore: {
-          nature: formData.madraCore || 'Pure',
-          currentMadra: parseInt(formData.currentMadra) || 100,
-          maxMadra: parseInt(formData.maxMadra) || 100,
-          tier: formData.advancementTier || 'Foundation',
-        },
-        stats: {
-          strength: parseInt(formData.strength) || 10,
-          dexterity: parseInt(formData.dexterity) || 10,
-          constitution: parseInt(formData.constitution) || 10,
-          intelligence: parseInt(formData.intelligence) || 10,
-          wisdom: parseInt(formData.wisdom) || 10,
-          charisma: parseInt(formData.charisma) || 10,
-          maxHp: parseInt(formData.maxHp) || 30,
-          currentHp: parseInt(formData.currentHp) || 30,
-          armorClass: parseInt(formData.armorClass) || 10,
-          initiative: parseInt(formData.initiative) || 0,
-          tierBonus: 0,
-        },
-        position: {
-          x: parseFloat(formData.positionX) || 50,
-          y: parseFloat(formData.positionY) || 50,
-        },
-        activity: formData.activity || 'idle',
-        currentGoal: formData.currentGoal || '',
-        timeline: [],
-        faction: formData.faction || '',
-        inventory: [],
-        techniques: [],
-        isPlayerCharacter: false,
-        isInPlayerParty: formData.isInPlayerParty === 'true',
-        discoveredByPlayer: true,
-        createdAt: now,
-        lastUpdated: now,
-      };
+    try {
+      if (objectType === 'character') {
+        // Create new character
+        const newCharacter: Character = {
+          id: `char-${now}-${Math.random().toString(36).substr(2, 9)}`,
+          name: formData.name || 'Unnamed Character',
+          description: formData.description || '',
+          advancementTier: formData.advancementTier || 'Foundation',
+          madraCore: {
+            nature: formData.madraCore || 'Pure',
+            currentMadra: parseInt(formData.currentMadra) || 100,
+            maxMadra: parseInt(formData.maxMadra) || 100,
+            tier: formData.advancementTier || 'Foundation',
+          },
+          stats: {
+            strength: parseInt(formData.strength) || 10,
+            dexterity: parseInt(formData.dexterity) || 10,
+            constitution: parseInt(formData.constitution) || 10,
+            intelligence: parseInt(formData.intelligence) || 10,
+            wisdom: parseInt(formData.wisdom) || 10,
+            charisma: parseInt(formData.charisma) || 10,
+            maxHp: parseInt(formData.maxHp) || 30,
+            currentHp: parseInt(formData.currentHp) || 30,
+            armorClass: parseInt(formData.armorClass) || 10,
+            initiative: parseInt(formData.initiative) || 0,
+            tierBonus: 0,
+          },
+          position: {
+            x: parseFloat(formData.positionX) || 50,
+            y: parseFloat(formData.positionY) || 50,
+          },
+          activity: formData.activity || 'idle',
+          currentGoal: formData.currentGoal || '',
+          timeline: [],
+          faction: formData.faction || '',
+          inventory: [],
+          techniques: [],
+          isPlayerCharacter: false,
+          isInPlayerParty: formData.isInPlayerParty === 'true',
+          discoveredByPlayer: true,
+          createdAt: now,
+          lastUpdated: now,
+        };
 
-      addCharacter(newCharacter);
-    } else {
-      // Create new location
-      const newLocation: Location = {
-        id: `loc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        name: formData.name || 'Unnamed Location',
-        description: formData.description || '',
-        position: {
-          x: parseFloat(formData.positionX) || 50,
-          y: parseFloat(formData.positionY) || 50,
-        },
-        type: formData.type || 'other',
-        discoveredByPlayer: true,
-        faction: formData.faction || undefined,
-      };
+        // Save to backend
+        const response = await fetch(`${API_BASE}/worlds/${world?.id}/characters`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newCharacter),
+        });
 
-      addLocation(newLocation);
+        if (!response.ok) {
+          throw new Error('Failed to create character');
+        }
+
+        // Update local state
+        addCharacter(newCharacter);
+      } else {
+        // Create new location
+        const newLocation: Location = {
+          id: `loc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          name: formData.name || 'Unnamed Location',
+          description: formData.description || '',
+          position: {
+            x: parseFloat(formData.positionX) || 50,
+            y: parseFloat(formData.positionY) || 50,
+          },
+          type: formData.type || 'other',
+          discoveredByPlayer: true,
+          faction: formData.faction || undefined,
+        };
+
+        // Save to backend
+        const response = await fetch(`${API_BASE}/worlds/${world?.id}/locations`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newLocation),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create location');
+        }
+
+        // Update local state
+        addLocation(newLocation);
+      }
+
+      // Reset form and close
+      setFormData({});
+      onClose();
+    } catch (error) {
+      console.error('Create error:', error);
+      alert('Failed to create object');
     }
-
-    // Reset form and close
-    setFormData({});
-    onClose();
   };
 
   const handleInputChange = (field: string, value: any) => {

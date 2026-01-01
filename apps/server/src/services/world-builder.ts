@@ -228,23 +228,10 @@ export class WorldBuilderService {
     
     await fileStorage.saveWorld(world);
     
-    // Delete the character file
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    const characterPath = path.join(
-      fileStorage['dataDir'],
-      'saves',
-      worldId,
-      'characters',
-      `${characterId}.json`
-    );
+    // Delete the character file using storage method
+    await fileStorage.deleteCharacter(worldId, characterId);
     
-    try {
-      await fs.unlink(characterPath);
-      console.log(`Deleted character "${characterId}" from world "${world.name}"`);
-    } catch (error) {
-      console.warn(`Failed to delete character file for "${characterId}":`, error);
-    }
+    console.log(`Deleted character "${characterId}" from world "${world.name}"`);
   }
   
   /**

@@ -213,6 +213,40 @@ export const worldRoutes: FastifyPluginAsync = async (fastify) => {
   });
   
   /**
+   * POST /api/worlds/:worldId/characters
+   * Add a new character to the world
+   */
+  fastify.post<{
+    Params: { worldId: string };
+    Body: import('@perpetu-ai/models').Character;
+  }>('/:worldId/characters', async (request, reply) => {
+    try {
+      const { worldId } = request.params;
+      const characterData = request.body;
+      
+      if (!characterData.name || !characterData.position) {
+        return reply.code(400).send({
+          error: 'name and position are required',
+        });
+      }
+      
+      // Save character to storage
+      await fileStorage.saveCharacter(worldId, characterData);
+      
+      return reply.code(201).send({
+        success: true,
+        character: characterData,
+      });
+    } catch (error) {
+      console.error('Add character error:', error);
+      return reply.code(500).send({
+        error: 'Failed to add character',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+  
+  /**
    * POST /api/worlds/:worldId/locations
    * Add a new location to the world
    */

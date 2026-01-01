@@ -251,6 +251,23 @@ export class FileStorage {
   }
   
   /**
+   * Delete character file
+   */
+  async deleteCharacter(worldId: string, characterId: string): Promise<void> {
+    const characterPath = path.join(this.getWorldDir(worldId), 'characters', `${characterId}.json`);
+    
+    try {
+      await fs.unlink(characterPath);
+    } catch (error) {
+      if (isNodeError(error) && error.code === 'ENOENT') {
+        // Character file doesn't exist, that's ok
+        return;
+      }
+      throw error;
+    }
+  }
+  
+  /**
    * Save event to file
    */
   async saveEvent(worldId: string, event: WorldEvent): Promise<void> {
