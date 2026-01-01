@@ -25,6 +25,18 @@ const DEFAULT_MAP_SIZE = 100; // Default map dimensions in units
 const COORDINATE_SCALE_FACTOR = 100; // Scale factor for converting game coordinates to display pixels
 const MAP_IMAGE_OPACITY = 0.4; // Background image opacity
 const MAP_IMAGE_FILTER = 'sepia(20%) contrast(90%)'; // Filter applied to background image
+const BACKGROUND_Z_INDEX = -1; // Z-index for background image node
+
+/**
+ * Custom hook to get inverse zoom transform style for fixed-size nodes
+ */
+function useZoomTransform() {
+  const zoom = useStore((state) => state.transform[2]);
+  return React.useMemo(
+    () => ({ transform: `scale(${1 / zoom})`, transformOrigin: 'center' }),
+    [zoom]
+  );
+}
 
 /**
  * Custom node component for grouped characters on the map
@@ -33,10 +45,10 @@ const CharacterGroupNode: React.FC<{ data: any }> = ({ data }) => {
   const { setSelectedCharacter } = useGameStore();
   const characters = data.characters || [];
   const [showList, setShowList] = useState(false);
-  const zoom = useStore((state) => state.transform[2]);
+  const zoomTransform = useZoomTransform();
   
   return (
-    <div className="relative" style={{ transform: `scale(${1 / zoom})`, transformOrigin: 'center' }}>
+    <div className="relative" style={zoomTransform}>
       {/* Group count badge */}
       <div className="absolute -top-2 -right-2 bg-accent text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center z-10 shadow-lg">
         {characters.length}
@@ -91,7 +103,7 @@ const CharacterGroupNode: React.FC<{ data: any }> = ({ data }) => {
 const CharacterNode: React.FC<{ data: any }> = ({ data }) => {
   const { setSelectedCharacter } = useGameStore();
   const character = data.character;
-  const zoom = useStore((state) => state.transform[2]);
+  const zoomTransform = useZoomTransform();
   
   // Safe access with fallbacks
   const name = character?.name || 'Unknown';
@@ -102,7 +114,7 @@ const CharacterNode: React.FC<{ data: any }> = ({ data }) => {
   const avatarUrl = character?.avatarUrl;
   
   return (
-    <div className="relative" style={{ transform: `scale(${1 / zoom})`, transformOrigin: 'center' }}>
+    <div className="relative" style={zoomTransform}>
       {/* Avatar overlay - positioned above the main node */}
       {avatarUrl && (
         <div
@@ -154,7 +166,7 @@ const LocationNode: React.FC<{ data: any }> = ({ data }) => {
   const { setSelectedLocation, characters } = useGameStore();
   const location: Location = data.location;
   const [showTooltip, setShowTooltip] = useState(false);
-  const zoom = useStore((state) => state.transform[2]);
+  const zoomTransform = useZoomTransform();
   
   // Calculate distance from player
   const playerCharacter = characters.find(c => c.isPlayerCharacter);
@@ -197,7 +209,7 @@ const LocationNode: React.FC<{ data: any }> = ({ data }) => {
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
       className="cursor-pointer relative"
-      style={{ transform: `scale(${1 / zoom})`, transformOrigin: 'center' }}
+      style={zoomTransform}
     >
       <div
         className="w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition-transform"
@@ -225,7 +237,7 @@ const LocationNode: React.FC<{ data: any }> = ({ data }) => {
 const MarkerNode: React.FC<{ data: any }> = ({ data }) => {
   const { setSelectedCharacter, setSelectedLocation, characters, world } = useGameStore();
   const { type, entityId, name } = data;
-  const zoom = useStore((state) => state.transform[2]);
+  const zoomTransform = useZoomTransform();
   
   const handleClick = () => {
     if (type === 'character') {
@@ -249,7 +261,7 @@ const MarkerNode: React.FC<{ data: any }> = ({ data }) => {
       onClick={handleClick}
       className="cursor-pointer bg-accent text-white rounded-full p-2 shadow-lg hover:scale-110 transition-transform"
       title={name}
-      style={{ transform: `scale(${1 / zoom})`, transformOrigin: 'center' }}
+      style={zoomTransform}
     >
       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -580,7 +592,7 @@ export const MapView: React.FC = () => {
         },
         draggable: false,
         selectable: false,
-        zIndex: -1,
+        zIndex: BACKGROUND_Z_INDEX,
       });
     }
     
