@@ -253,7 +253,7 @@ const nodeTypes: NodeTypes = {
  * Map view component with draggable, zoomable world map
  */
 export const MapView: React.FC = () => {
-  const { world, characters, setSelectedCharacter, setSelectedLocation } = useGameStore();
+  const { world, characters } = useGameStore();
   const [markers, setMarkers] = useState<Array<{
     id: string;
     type: 'character' | 'location';

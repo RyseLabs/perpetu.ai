@@ -13,7 +13,7 @@ type ObjectType = 'character' | 'location';
  * Modal for adding new characters or locations to the game
  */
 export const AddObjectModal: React.FC<AddObjectModalProps> = ({ isOpen, onClose }) => {
-  const { world, addCharacter, addLocation } = useGameStore();
+  const { addCharacter, addLocation } = useGameStore();
   const [objectType, setObjectType] = useState<ObjectType>('character');
   const [formData, setFormData] = useState<Record<string, any>>({});
 
@@ -22,10 +22,12 @@ export const AddObjectModal: React.FC<AddObjectModalProps> = ({ isOpen, onClose 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const now = Date.now();
+
     if (objectType === 'character') {
       // Create new character
       const newCharacter: Character = {
-        id: `char-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `char-${now}-${Math.random().toString(36).substr(2, 9)}`,
         name: formData.name || 'Unnamed Character',
         description: formData.description || '',
         advancementTier: formData.advancementTier || 'Foundation',
@@ -33,6 +35,7 @@ export const AddObjectModal: React.FC<AddObjectModalProps> = ({ isOpen, onClose 
           nature: formData.madraCore || 'Pure',
           currentMadra: parseInt(formData.currentMadra) || 100,
           maxMadra: parseInt(formData.maxMadra) || 100,
+          tier: formData.advancementTier || 'Foundation',
         },
         stats: {
           strength: parseInt(formData.strength) || 10,
@@ -60,6 +63,8 @@ export const AddObjectModal: React.FC<AddObjectModalProps> = ({ isOpen, onClose 
         isPlayerCharacter: false,
         isInPlayerParty: formData.isInPlayerParty === 'true',
         discoveredByPlayer: true,
+        createdAt: now,
+        lastUpdated: now,
       };
 
       addCharacter(newCharacter);
