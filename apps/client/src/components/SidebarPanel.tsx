@@ -16,29 +16,44 @@ interface DragData {
 export const SidebarPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('party');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+  const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null);
   const { characters, world, selectedCharacter, selectedLocation, setSelectedCharacter, setSelectedLocation } = useGameStore();
   
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setDragStartPos({ x: e.clientX, y: e.clientY });
+  };
+  
   const handleDragStart = (e: React.DragEvent, data: DragData) => {
-    setIsDragging(true);
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setData('application/json', JSON.stringify(data));
   };
   
   const handleDragEnd = () => {
-    setIsDragging(false);
+    // Clear drag position after a short delay to ensure click is processed
+    setTimeout(() => setDragStartPos(null), 100);
   };
   
-  // Handle click - only if not dragging
+  // Handle click - check if this was actually a drag
   const handleClick = (entityType: string, entityName: string, callback: () => void) => (e: React.MouseEvent) => {
-    e.preventDefault();
-    console.log(`[SidebarPanel] Click detected on ${entityType}: ${entityName}, isDragging: ${isDragging}`);
-    if (!isDragging) {
-      console.log(`[SidebarPanel] Executing callback for ${entityType}: ${entityName}`);
-      callback();
-    } else {
-      console.log(`[SidebarPanel] Click ignored due to dragging state`);
+    e.stopPropagation();
+    
+    // If we have a drag start position, check if mouse moved significantly
+    if (dragStartPos) {
+      const distance = Math.sqrt(
+        Math.pow(e.clientX - dragStartPos.x, 2) + 
+        Math.pow(e.clientY - dragStartPos.y, 2)
+      );
+      
+      // If moved more than 5 pixels, consider it a drag, not a click
+      if (distance > 5) {
+        console.log(`[SidebarPanel] Click ignored - was a drag (moved ${distance.toFixed(0)}px)`);
+        return;
+      }
     }
+    
+    console.log(`[SidebarPanel] Click detected on ${entityType}: ${entityName}`);
+    console.log(`[SidebarPanel] Executing callback for ${entityType}: ${entityName}`);
+    callback();
   };
   
   const partyMembers = characters.filter((char) => char.isInPlayerParty);
@@ -112,6 +127,7 @@ export const SidebarPanel: React.FC = () => {
                     <button
                       key={character.id}
                       draggable
+                      onMouseDown={handleMouseDown}
                       onDragStart={(e) => handleDragStart(e, {
                         type: 'character',
                         id: character.id,
@@ -122,10 +138,10 @@ export const SidebarPanel: React.FC = () => {
                         setSelectedCharacter(character);
                         setSelectedLocation(null);
                       })}
-                      className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 cursor-move ${
+                      className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 cursor-pointer border-2 ${
                         selectedCharacter?.id === character.id
-                          ? 'bg-accent text-white'
-                          : 'bg-panel-border hover:bg-opacity-50'
+                          ? 'bg-accent text-white border-accent-light shadow-lg'
+                          : 'bg-panel-border hover:bg-opacity-50 border-transparent hover:border-accent'
                       }`}
                     >
                       {character.avatarUrl ? (
@@ -169,6 +185,7 @@ export const SidebarPanel: React.FC = () => {
                     <button
                       key={character.id}
                       draggable
+                      onMouseDown={handleMouseDown}
                       onDragStart={(e) => handleDragStart(e, {
                         type: 'character',
                         id: character.id,
@@ -179,10 +196,10 @@ export const SidebarPanel: React.FC = () => {
                         setSelectedCharacter(character);
                         setSelectedLocation(null);
                       })}
-                      className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 cursor-move ${
+                      className={`w-full text-left p-3 rounded-lg transition-colors flex items-center gap-3 cursor-pointer border-2 ${
                         selectedCharacter?.id === character.id
-                          ? 'bg-accent text-white'
-                          : 'bg-panel-border hover:bg-opacity-50'
+                          ? 'bg-accent text-white border-accent-light shadow-lg'
+                          : 'bg-panel-border hover:bg-opacity-50 border-transparent hover:border-accent'
                       }`}
                     >
                       {character.avatarUrl && character.discoveredByPlayer ? (
@@ -230,6 +247,7 @@ export const SidebarPanel: React.FC = () => {
                     <button
                       key={location.id}
                       draggable
+                      onMouseDown={handleMouseDown}
                       onDragStart={(e) => handleDragStart(e, {
                         type: 'location',
                         id: location.id,
@@ -240,10 +258,10 @@ export const SidebarPanel: React.FC = () => {
                         setSelectedLocation(location);
                         setSelectedCharacter(null);
                       })}
-                      className={`w-full text-left p-3 rounded-lg transition-colors cursor-move ${
+                      className={`w-full text-left p-3 rounded-lg transition-colors cursor-pointer border-2 ${
                         selectedLocation?.id === location.id
-                          ? 'bg-accent text-white'
-                          : 'bg-panel-border hover:bg-opacity-50'
+                          ? 'bg-accent text-white border-accent-light shadow-lg'
+                          : 'bg-panel-border hover:bg-opacity-50 border-transparent hover:border-accent'
                       }`}
                     >
                       <div className="font-semibold truncate">{name}</div>
