@@ -70,6 +70,12 @@ export const EditObjectModal: React.FC<EditObjectModalProps> = ({
 
     const API_BASE = 'http://localhost:3000/api';
 
+    // Check if world exists
+    if (!world || !world.id) {
+      alert('No world selected. Please select or create a world first.');
+      return;
+    }
+
     try {
       if (objectType === 'character') {
         const character = object as Character;
@@ -108,7 +114,7 @@ export const EditObjectModal: React.FC<EditObjectModalProps> = ({
         };
 
         const response = await fetch(
-          `${API_BASE}/worlds/${world?.id}/characters/${character.id}`,
+          `${API_BASE}/worlds/${world.id}/characters/${character.id}`,
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -117,7 +123,9 @@ export const EditObjectModal: React.FC<EditObjectModalProps> = ({
         );
 
         if (!response.ok) {
-          throw new Error('Failed to update character');
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Update character failed:', response.status, errorData);
+          throw new Error(errorData.message || 'Failed to update character');
         }
 
         updateCharacter(character.id, updates);
@@ -135,7 +143,7 @@ export const EditObjectModal: React.FC<EditObjectModalProps> = ({
         };
 
         const response = await fetch(
-          `${API_BASE}/worlds/${world?.id}/locations/${location.id}`,
+          `${API_BASE}/worlds/${world.id}/locations/${location.id}`,
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -144,7 +152,9 @@ export const EditObjectModal: React.FC<EditObjectModalProps> = ({
         );
 
         if (!response.ok) {
-          throw new Error('Failed to update location');
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Update location failed:', response.status, errorData);
+          throw new Error(errorData.message || 'Failed to update location');
         }
 
         updateLocation(location.id, updates);
@@ -153,7 +163,7 @@ export const EditObjectModal: React.FC<EditObjectModalProps> = ({
       onClose();
     } catch (error) {
       console.error('Update error:', error);
-      alert('Failed to update object');
+      alert(`Failed to update object: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

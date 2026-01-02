@@ -85,33 +85,43 @@ export const SidebarPanel: React.FC = () => {
 
     const API_BASE = 'http://localhost:3000/api';
 
+    // Check if world exists
+    if (!world || !world.id) {
+      alert('No world selected. Please select or create a world first.');
+      return;
+    }
+
     try {
       if (deletingObject.type === 'character') {
         const response = await fetch(
-          `${API_BASE}/worlds/${world?.id}/characters/${deletingObject.id}`,
+          `${API_BASE}/worlds/${world.id}/characters/${deletingObject.id}`,
           { method: 'DELETE' }
         );
 
         if (!response.ok) {
-          throw new Error('Failed to delete character');
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Delete character failed:', response.status, errorData);
+          throw new Error(errorData.message || 'Failed to delete character');
         }
 
         deleteCharacter(deletingObject.id);
       } else {
         const response = await fetch(
-          `${API_BASE}/worlds/${world?.id}/locations/${deletingObject.id}`,
+          `${API_BASE}/worlds/${world.id}/locations/${deletingObject.id}`,
           { method: 'DELETE' }
         );
 
         if (!response.ok) {
-          throw new Error('Failed to delete location');
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Delete location failed:', response.status, errorData);
+          throw new Error(errorData.message || 'Failed to delete location');
         }
 
         deleteLocation(deletingObject.id);
       }
     } catch (error) {
       console.error('Delete error:', error);
-      alert('Failed to delete object');
+      alert(`Failed to delete object: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
