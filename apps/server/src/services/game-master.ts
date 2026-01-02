@@ -1,4 +1,4 @@
-import { AIClient, GAME_MASTER_SYSTEM_PROMPT, PLAYER_CHARACTER_CREATION_PROMPT, generatePlayerCharacterPrompt, generateGameMasterPrompt } from '@perpetu-ai/ai';
+import { AIClient, PLAYER_CHARACTER_CREATION_PROMPT, generatePlayerCharacterPrompt, generateGameMasterPrompt, generateGameMasterSystemPromptWithState } from '@perpetu-ai/ai';
 import { Character } from '@perpetu-ai/models';
 import { fileStorage } from '../storage.js';
 import { config } from '../config.js';
@@ -127,10 +127,13 @@ export class GameMasterService {
     
     const characters = await fileStorage.getWorldCharacters(worldId);
     
-    // Generate GM response using AI
+    // Generate GM response using AI with game state in system prompt
+    const systemPrompt = generateGameMasterSystemPromptWithState(world, characters);
+    const userPrompt = generateGameMasterPrompt(world, characters, playerMessage, chatHistory);
+    
     const response = await this.aiClient.generateText(
-      GAME_MASTER_SYSTEM_PROMPT,
-      generateGameMasterPrompt(world, characters, playerMessage, chatHistory),
+      systemPrompt,
+      userPrompt,
       0.8
     );
     

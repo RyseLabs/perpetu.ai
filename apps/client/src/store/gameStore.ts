@@ -40,6 +40,7 @@ interface GameState {
   setCharacters: (characters: Character[]) => void;
   addCharacter: (character: Character) => void;
   updateCharacter: (characterId: string, updates: Partial<Character>) => void;
+  deleteCharacter: (characterId: string) => void;
   setSelectedCharacter: (character: Character | null) => void;
   setSelectedLocation: (location: Location | null) => void;
   addChatMessage: (sender: 'player' | 'gm' | 'system', content: string) => void;
@@ -52,6 +53,7 @@ interface GameState {
   setLoadingWorlds: (isLoading: boolean) => void;
   addLocation: (location: Location) => void;
   updateLocation: (locationId: string, updates: Partial<Location>) => void;
+  deleteLocation: (locationId: string) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -98,6 +100,13 @@ export const useGameStore = create<GameState>((set) => ({
         state.selectedCharacter?.id === characterId
           ? { ...state.selectedCharacter, ...updates }
           : state.selectedCharacter,
+    })),
+  
+  deleteCharacter: (characterId) =>
+    set((state) => ({
+      characters: state.characters.filter((char) => char.id !== characterId),
+      selectedCharacter:
+        state.selectedCharacter?.id === characterId ? null : state.selectedCharacter,
     })),
   
   setSelectedCharacter: (character) => set({ selectedCharacter: character, selectedLocation: null }),
@@ -165,5 +174,20 @@ export const useGameStore = create<GameState>((set) => ({
         state.selectedLocation?.id === locationId
           ? { ...state.selectedLocation, ...updates }
           : state.selectedLocation,
+    })),
+  
+  deleteLocation: (locationId) =>
+    set((state) => ({
+      world: state.world
+        ? {
+            ...state.world,
+            map: {
+              ...state.world.map,
+              locations: state.world.map.locations.filter((loc) => loc.id !== locationId),
+            },
+          }
+        : null,
+      selectedLocation:
+        state.selectedLocation?.id === locationId ? null : state.selectedLocation,
     })),
 }));

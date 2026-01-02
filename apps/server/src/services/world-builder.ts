@@ -172,6 +172,69 @@ export class WorldBuilderService {
   }
   
   /**
+   * Update a location in the world
+   */
+  async updateLocation(worldId: string, locationId: string, updates: Partial<Location>): Promise<void> {
+    const world = await fileStorage.getWorld(worldId);
+    if (!world) {
+      throw new Error('World not found');
+    }
+    
+    const locationIndex = world.map.locations.findIndex(l => l.id === locationId);
+    if (locationIndex === -1) {
+      throw new Error('Location not found');
+    }
+    
+    world.map.locations[locationIndex] = {
+      ...world.map.locations[locationIndex],
+      ...updates,
+    };
+    world.lastUpdated = Date.now();
+    
+    await fileStorage.saveWorld(world);
+    
+    console.log(`Updated location "${locationId}" in world "${world.name}"`);
+  }
+  
+  /**
+   * Delete a location from the world
+   */
+  async deleteLocation(worldId: string, locationId: string): Promise<void> {
+    const world = await fileStorage.getWorld(worldId);
+    if (!world) {
+      throw new Error('World not found');
+    }
+    
+    world.map.locations = world.map.locations.filter(l => l.id !== locationId);
+    world.lastUpdated = Date.now();
+    
+    await fileStorage.saveWorld(world);
+    
+    console.log(`Deleted location "${locationId}" from world "${world.name}"`);
+  }
+  
+  /**
+   * Delete a character from the world
+   */
+  async deleteCharacter(worldId: string, characterId: string): Promise<void> {
+    const world = await fileStorage.getWorld(worldId);
+    if (!world) {
+      throw new Error('World not found');
+    }
+    
+    // Remove character ID from world's character list if present
+    world.characterIds = world.characterIds.filter(id => id !== characterId);
+    world.lastUpdated = Date.now();
+    
+    await fileStorage.saveWorld(world);
+    
+    // Delete the character file using storage method
+    await fileStorage.deleteCharacter(worldId, characterId);
+    
+    console.log(`Deleted character "${characterId}" from world "${world.name}"`);
+  }
+  
+  /**
    * Get world by ID
    */
   async getWorld(worldId: string): Promise<World | null> {

@@ -361,8 +361,10 @@ const MapViewInner: React.FC = () => {
   }, [updateCharacter, updateLocation, world, setMouseCoords]);
   
   // Handle when a node drag is complete
-  const handleNodeDragStop = useCallback((_event: any, node: Node) => {
+  const handleNodeDragStop = useCallback(async (_event: any, node: Node) => {
     console.log('[MapView] Node drag stop:', node.type, node.id, node.data);
+    
+    const API_BASE = 'http://localhost:3000/api';
     
     if (node.type === 'marker') {
       const { type, entityId, name } = node.data as any;
@@ -379,9 +381,51 @@ const MapViewInner: React.FC = () => {
       if (type === 'location' && entityId) {
         console.log(`[MapView] Calling updateLocation for ${entityId} with position:`, finalPosition);
         updateLocation(entityId, { position: finalPosition });
+        
+        // Save to backend
+        if (world?.id) {
+          try {
+            const response = await fetch(
+              `${API_BASE}/worlds/${world.id}/locations/${entityId}`,
+              {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ position: finalPosition }),
+              }
+            );
+            
+            if (!response.ok) {
+              console.error('Failed to save location position to backend');
+            } else {
+              console.log(`[MapView] Successfully saved location ${entityId} position to backend`);
+            }
+          } catch (error) {
+            console.error('Error saving location position:', error);
+          }
+        }
+      } else if (type === 'character' && entityId) {
+        // Save character position to backend
+        if (world?.id) {
+          try {
+            const response = await fetch(
+              `${API_BASE}/worlds/${world.id}/characters/${entityId}`,
+              {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ position: finalPosition }),
+              }
+            );
+            
+            if (!response.ok) {
+              console.error('Failed to save character position to backend');
+            } else {
+              console.log(`[MapView] Successfully saved character ${entityId} position to backend`);
+            }
+          } catch (error) {
+            console.error('Error saving character position:', error);
+          }
+        }
       }
-      
-      // TODO: Send update to backend
     } else if (node.type === 'characterGroup') {
       const { characters } = node.data as any;
       console.log(`[MapView] Character group drag complete at:`, node.position);
@@ -394,15 +438,35 @@ const MapViewInner: React.FC = () => {
       
       // Update all characters in the group to the final position
       if (characters && Array.isArray(characters)) {
-        characters.forEach((char: any) => {
+        for (const char of characters) {
           console.log(`[MapView] Updating character ${char.id} in group to:`, finalPosition);
           updateCharacter(char.id, { position: finalPosition });
-        });
+          
+          // Save each character position to backend
+          if (world?.id) {
+            try {
+              const response = await fetch(
+                `${API_BASE}/worlds/${world.id}/characters/${char.id}`,
+                {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ position: finalPosition }),
+                }
+              );
+              
+              if (!response.ok) {
+                console.error(`Failed to save character ${char.id} position to backend`);
+              } else {
+                console.log(`[MapView] Successfully saved character ${char.id} position to backend`);
+              }
+            } catch (error) {
+              console.error(`Error saving character ${char.id} position:`, error);
+            }
+          }
+        }
       }
-      
-      // TODO: Send update to backend
     }
-  }, [updateCharacter, updateLocation]);
+  }, [updateCharacter, updateLocation, world]);
   
   // Update nodes when characters or locations change
   React.useEffect(() => {

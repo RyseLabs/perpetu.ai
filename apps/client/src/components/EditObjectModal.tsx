@@ -1,28 +1,73 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
 import type { Character, Location } from '@perpetu-ai/models';
 
-interface AddObjectModalProps {
+interface EditObjectModalProps {
   isOpen: boolean;
   onClose: () => void;
+  object: Character | Location | null;
+  objectType: 'character' | 'location';
 }
 
-type ObjectType = 'character' | 'location';
-
 /**
- * Modal for adding new characters or locations to the game
+ * Modal for editing characters or locations
  */
-export const AddObjectModal: React.FC<AddObjectModalProps> = ({ isOpen, onClose }) => {
-  const { addCharacter, addLocation, world } = useGameStore();
-  const [objectType, setObjectType] = useState<ObjectType>('character');
+export const EditObjectModal: React.FC<EditObjectModalProps> = ({
+  isOpen,
+  onClose,
+  object,
+  objectType,
+}) => {
+  const { updateCharacter, updateLocation, world } = useGameStore();
   const [formData, setFormData] = useState<Record<string, any>>({});
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (object && isOpen) {
+      if (objectType === 'character') {
+        const char = object as Character;
+        setFormData({
+          name: char.name,
+          description: char.description || '',
+          positionX: char.position.x,
+          positionY: char.position.y,
+          advancementTier: char.advancementTier,
+          madraCore: char.madraCore.nature,
+          currentMadra: char.madraCore.currentMadra,
+          maxMadra: char.madraCore.maxMadra,
+          strength: char.stats.strength,
+          dexterity: char.stats.dexterity,
+          constitution: char.stats.constitution,
+          intelligence: char.stats.intelligence,
+          wisdom: char.stats.wisdom,
+          charisma: char.stats.charisma,
+          maxHp: char.stats.maxHp,
+          currentHp: char.stats.currentHp,
+          armorClass: char.stats.armorClass,
+          initiative: char.stats.initiative,
+          activity: char.activity,
+          currentGoal: char.currentGoal || '',
+          faction: char.faction || '',
+          isInPlayerParty: char.isInPlayerParty ? 'true' : 'false',
+        });
+      } else {
+        const loc = object as Location;
+        setFormData({
+          name: loc.name,
+          description: loc.description,
+          positionX: loc.position.x,
+          positionY: loc.position.y,
+          type: loc.type,
+          faction: loc.faction || '',
+        });
+      }
+    }
+  }, [object, isOpen, objectType]);
+
+  if (!isOpen || !object) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const now = Date.now();
     const API_BASE = 'http://localhost:3000/api';
 
     // Check if world exists
@@ -33,97 +78,92 @@ export const AddObjectModal: React.FC<AddObjectModalProps> = ({ isOpen, onClose 
 
     try {
       if (objectType === 'character') {
-        // Create new character
-        const newCharacter: Character = {
-          id: `char-${now}-${Math.random().toString(36).substr(2, 9)}`,
-          name: formData.name || 'Unnamed Character',
-          description: formData.description || '',
-          advancementTier: formData.advancementTier || 'Foundation',
+        const character = object as Character;
+        const updates: Partial<Character> = {
+          name: formData.name,
+          description: formData.description,
+          position: {
+            x: parseFloat(formData.positionX),
+            y: parseFloat(formData.positionY),
+          },
+          advancementTier: formData.advancementTier,
           madraCore: {
-            nature: formData.madraCore || 'Pure',
-            currentMadra: parseInt(formData.currentMadra) || 100,
-            maxMadra: parseInt(formData.maxMadra) || 100,
-            tier: formData.advancementTier || 'Foundation',
+            ...character.madraCore,
+            nature: formData.madraCore,
+            currentMadra: parseInt(formData.currentMadra),
+            maxMadra: parseInt(formData.maxMadra),
           },
           stats: {
-            strength: parseInt(formData.strength) || 10,
-            dexterity: parseInt(formData.dexterity) || 10,
-            constitution: parseInt(formData.constitution) || 10,
-            intelligence: parseInt(formData.intelligence) || 10,
-            wisdom: parseInt(formData.wisdom) || 10,
-            charisma: parseInt(formData.charisma) || 10,
-            maxHp: parseInt(formData.maxHp) || 30,
-            currentHp: parseInt(formData.currentHp) || 30,
-            armorClass: parseInt(formData.armorClass) || 10,
-            initiative: parseInt(formData.initiative) || 0,
-            tierBonus: 0,
+            ...character.stats,
+            strength: parseInt(formData.strength),
+            dexterity: parseInt(formData.dexterity),
+            constitution: parseInt(formData.constitution),
+            intelligence: parseInt(formData.intelligence),
+            wisdom: parseInt(formData.wisdom),
+            charisma: parseInt(formData.charisma),
+            maxHp: parseInt(formData.maxHp),
+            currentHp: parseInt(formData.currentHp),
+            armorClass: parseInt(formData.armorClass),
+            initiative: parseInt(formData.initiative),
           },
-          position: {
-            x: parseFloat(formData.positionX) || 50,
-            y: parseFloat(formData.positionY) || 50,
-          },
-          activity: formData.activity || 'idle',
-          currentGoal: formData.currentGoal || '',
-          timeline: [],
-          faction: formData.faction || '',
-          inventory: [],
-          techniques: [],
-          isPlayerCharacter: false,
+          activity: formData.activity,
+          currentGoal: formData.currentGoal,
+          faction: formData.faction,
           isInPlayerParty: formData.isInPlayerParty === 'true',
-          discoveredByPlayer: true,
-          createdAt: now,
-          lastUpdated: now,
+          lastUpdated: Date.now(),
         };
 
-        // Save to backend
-        const response = await fetch(`${API_BASE}/worlds/${world.id}/characters`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newCharacter),
-        });
+        const response = await fetch(
+          `${API_BASE}/worlds/${world.id}/characters/${character.id}`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates),
+          }
+        );
 
         if (!response.ok) {
-          throw new Error('Failed to create character');
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Update character failed:', response.status, errorData);
+          throw new Error(errorData.message || 'Failed to update character');
         }
 
-        // Update local state
-        addCharacter(newCharacter);
+        updateCharacter(character.id, updates);
       } else {
-        // Create new location
-        const newLocation: Location = {
-          id: `loc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          name: formData.name || 'Unnamed Location',
-          description: formData.description || '',
+        const location = object as Location;
+        const updates: Partial<Location> = {
+          name: formData.name,
+          description: formData.description,
           position: {
-            x: parseFloat(formData.positionX) || 50,
-            y: parseFloat(formData.positionY) || 50,
+            x: parseFloat(formData.positionX),
+            y: parseFloat(formData.positionY),
           },
-          type: formData.type || 'other',
-          discoveredByPlayer: true,
+          type: formData.type,
           faction: formData.faction || undefined,
         };
 
-        // Save to backend
-        const response = await fetch(`${API_BASE}/worlds/${world.id}/locations`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newLocation),
-        });
+        const response = await fetch(
+          `${API_BASE}/worlds/${world.id}/locations/${location.id}`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates),
+          }
+        );
 
         if (!response.ok) {
-          throw new Error('Failed to create location');
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Update location failed:', response.status, errorData);
+          throw new Error(errorData.message || 'Failed to update location');
         }
 
-        // Update local state
-        addLocation(newLocation);
+        updateLocation(location.id, updates);
       }
 
-      // Reset form and close
-      setFormData({});
       onClose();
     } catch (error) {
-      console.error('Create error:', error);
-      alert('Failed to create object');
+      console.error('Update error:', error);
+      alert(`Failed to update object: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -135,7 +175,9 @@ export const AddObjectModal: React.FC<AddObjectModalProps> = ({ isOpen, onClose 
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-panel-bg border-2 border-panel-border rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold text-accent">Add New Object</h2>
+          <h2 className="text-2xl font-bold text-accent">
+            Edit {objectType === 'character' ? 'Character' : 'Location'}
+          </h2>
           <button
             onClick={onClose}
             className="text-text-secondary hover:text-accent transition-colors text-2xl"
@@ -145,35 +187,6 @@ export const AddObjectModal: React.FC<AddObjectModalProps> = ({ isOpen, onClose 
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Object Type Selection */}
-          <div>
-            <label className="block text-sm font-semibold mb-2">Object Type</label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setObjectType('character')}
-                className={`flex-1 py-2 px-4 rounded transition-colors ${
-                  objectType === 'character'
-                    ? 'bg-accent text-white'
-                    : 'bg-panel-border text-text-secondary hover:bg-opacity-70'
-                }`}
-              >
-                Character
-              </button>
-              <button
-                type="button"
-                onClick={() => setObjectType('location')}
-                className={`flex-1 py-2 px-4 rounded transition-colors ${
-                  objectType === 'location'
-                    ? 'bg-accent text-white'
-                    : 'bg-panel-border text-text-secondary hover:bg-opacity-70'
-                }`}
-              >
-                Location
-              </button>
-            </div>
-          </div>
-
           {/* Common Fields */}
           <div>
             <label className="block text-sm font-semibold mb-1">Name *</label>
@@ -352,7 +365,7 @@ export const AddObjectModal: React.FC<AddObjectModalProps> = ({ isOpen, onClose 
               type="submit"
               className="flex-1 py-2 px-4 bg-accent text-white rounded hover:bg-accent-dark transition-colors"
             >
-              Create {objectType === 'character' ? 'Character' : 'Location'}
+              Save Changes
             </button>
           </div>
         </form>
